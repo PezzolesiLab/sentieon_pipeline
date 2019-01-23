@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+file=$1
+fullPath="/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/realData"
+#fullPath="/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/practiceData/double"
+#fullPath="/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/practiceData/single"
+#fullPath="/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/practiceData/gathered"
+
+# DEPRICATED: some of our samples have a "-" in them so it wont work to split the filename by "-". Have to replace the first occurrence
+# of "-" with "_"
+#newDelim="LU01_"
+#newFile=$(echo "${file/LU01\-/$newDelim}")
+
+# split the newFile name to get the sample id
+IFS="." read -ra filenameExt <<< $file
+IFS="_" read -ra idRead <<< ${filenameExt[0]}
+id=${idRead[0]}
+# don't need to include this in the readgroup
+# see section 9.1 of sentieon manual 201808.03
+# readNum=${idRead[1]}
+
+# Get flowcell and lane information. These are homogenous throughout so I'm just taking it from the first line
+flowcellLane=$(cat $file | head -n 1 | cut -d ":" -f 3,4)
+IFS=":" read -ra fcLn <<< $flowcellLane
+flowcell=${fcLn[0]}
+lane=${fcLn[1]}
+
+# create the readgroup string
+rg=$(echo "@RG\tID:$id.$flowcell.$lane\tSM:$id\tPL:ILLUMINA\tPU:$flowcell.$lane\tLB:$id")
+# create the output line that will be consumed by a nextflow channel
+line=$(echo "$rg,$fullPath/$file")
+
+echo $line

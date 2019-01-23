@@ -1,0 +1,6 @@
+.nextflow*
+old/
+realData/
+*.err
+*.out
+test*/
