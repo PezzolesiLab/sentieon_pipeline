@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH --time=3-12:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --nodes=1
 #SBATCH -o pipelineKickOff-%j.out
 #SBATCH -e pipelineKickOff-%j.err
@@ -8,15 +8,16 @@
 #SBATCH --mail-type=END
 #SBATCH --account=pezzolesi-np
 #SBATCH --partition=pezzolesi-np
+##SBATCH --partition=notchpeak
 
 resume=$1
+SLURM_CLUSTERS="kingspeak"
+export SLURM_CLUSTERS
 
 if [[ $resume == "resume" ]]; then
     if [ -d $scr/run-nf ]; then
         cd $scr/run-nf
         echo "RESUMING"
-        SLURM_CLUSTERS="kingspeak"
-        export SLURM_CLUSTERS
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf -resume
     else
         echo "There's nothing to resume (scratch directory doesn't exist)"
@@ -28,8 +29,6 @@ elif [[ $resume == "new" ]]; then
         cp ./sentieon.nf ./nextflow.config $scr/run-nf
         cp ./bin/pezzAlign $scr/run-nf/bin
         cd $scr/run-nf
-        SLURM_CLUSTERS="kingspeak"
-        export SLURM_CLUSTERS
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf
     else
         echo "A project already exists. Delete it and start over or resume it"

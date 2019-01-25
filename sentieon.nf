@@ -44,8 +44,11 @@ process unzipFastqs {
     """
     gunzip -c ${gzfq_file} > ${sample_read}.fastq
     """
+    //echo ${gzfq_file.baseName} > ${sample_read}.fastq
 }
 
+//fastqs_ch.into{ firstFq_ch; fastp_in_ch; fastqc_in_ch; groupFq_ch }
+/*
 process getSampleInfo {
     tag { sample_read }
 
@@ -59,39 +62,41 @@ process getSampleInfo {
     pezzAlign ${fq_file} > ${sample_read}.align.txt
     """
 }
+*/
 
-sampleInfo_ch.into{ bwa_in_ch; fastp_in_ch; fastqc_in_ch }
+fastqs_ch.into{ groupFq_ch; fastp_in_ch; fastqc_in_ch }
+//sampleInfo_ch.into{ bwa_in_ch; fastp_in_ch; fastqc_in_ch }
 
 process runFastp {
-    tag { sample_id }
+    tag { sample_read }
 
     //publishDir '/scratch/general/lustre/u6013142/run-nf/results/fastp', mode: 'copy'
-    publishDir "'/scratch/general/lustre/u6013142/run-nf/results/fastp', mode: 'copy'
+    publishDir "/scratch/general/lustre/u6013142/run-nf/results/fastp", mode: 'copy'
 
     input:
     //set val(sample_read), val(_), val(fqPath) from bwa_in_ch.splitCsv().map{ id, _, path -> tuple(id, _, file(path))}
-    set val(sample_id), file(fq_file), file(align_file) from fastp_in_ch
+    set val(sample_id), val(sample_read), file(fq_file) from fastp_in_ch
 
     output:
     val 'complete' into fastp_out_ch
-    file("${sample_id}.${align_file.baseName}.fastp.report.html")
+    file("${sample_read}.fastp.report.html")
 
     shell:
     '''
     fastp \\
     --thread !{params.kp_cpus} \\
     --in1 !{fq_file} \\
-    --html "!{sample_id}.!{align_file.baseName}.fastp.report.html" \\
+    --html "!{sample_read}.fastp.report.html" \\
     '''
 }
 
 process runFastqc {
-    tag { sample_id }
+    tag { sample_read }
 
     //publishDir '/scratch/general/lustre/u6013142/run-nf/results/fastp', mode: 'copy'
 
     input:
-    set val(sample_id), file(fq_file), file(align_file) from fastp_in_ch
+    set val(sample_id), val(sample_read), file(fq_file) from fastqc_in_ch
 
     output:
     val 'complete' into fastqc_out_ch
@@ -102,61 +107,65 @@ process runFastqc {
     fastqc !{fq_file} -o !{params.fastqc} -t !{params.kp_cpus} 
     '''
 }
+
+groupFq_ch
+    .groupTuple()
+    .set { sortFq_collect_ch }
     
 process BWA {
     tag { sample_id }
 
     input:
-    set val(sample_id), file(fq_file), file(alignFile) from bwa_in_ch
+    //set val(sample_id), file(fq_file), file(alignFile) from bwa_in_ch
+    set val(sample_id), file(sample_reads), file(fq_files) from sortFq_collect_ch
 
     output:
-    set sample_id, file("${sample_id}.${alignFile.baseName}.sorted.bam"), file("${sample_id}.${alignFile.baseName}.sorted.bam.bai") into sentieonBWA_out_ch
+    set sample_id, file("${sample_id}.sorted.bam"), file("${sample_id}.sorted.bam.bai") into sentieonBWA_out_ch
 
     shell:
+    fq1 = fq_files[0]
+    fq2 = fq_files[1]
+
+    //export RGID=$(cat !{alignFile} | perl -F, -lane 'print $F[0]')
     '''
-    export RGID=$(cat !{alignFile} | perl -F, -lane 'print $F[0]')
+    export RG=$(pezzAlign !{fq1})
 
     ( bwa mem -M \\
-    -R $RGID \\
+    -R $RG \\
     -K 10000000 \\
     -t $SLURM_CPUS_ON_NODE \\
     !{params.reference} \\
-    !{fq_file} \\
+    !{fq1} \\
+    !{fq2} \\
     || echo -n 'error' ) \\
     | sentieon util sort \\
-    -o "!{sample_id}.!{alignFile.baseName}.sorted.bam" \\
+    -o "!{sample_id}.sorted.bam" \\
     -t $SLURM_CPUS_ON_NODE \\
-    --sam2bam -i - \\
+    --sam2bam -i -
     '''
 }
-
-Channel.from sentieonBWA_out_ch
-    .groupTuple()
-    .set { sortBWA_collect_ch }
 
 process dedup {
     tag { sample_id }
 
     input:
-    set sample_id, file(sortbams), file(indexs) from sortBWA_collect_ch
+    set sample_id, file(bam), file(index) from sentieonBWA_out_ch
 
     output:
     set sample_id, file("${sample_id}.dedup.bam"), file("${sample_id}.dedup.bam.bai") into sentieonDedup_out_ch
 
     shell:
-
-    bamList = sortbams.join(' -i ')
-
+    //bamList = sortbams.join(' -i ')
     '''
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
-    -i !{bamList} \\
+    -i !{bam} \\
     --algo LocusCollector \\
     --fun score_info "!{sample_id}.score.txt" \\
 
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
-    -i !{bamList} \\
+    -i !{bam} \\
     --algo Dedup \\
     --score_info "!{sample_id}.score.txt" \\
     --metrics "!{sample_id}.metric.txt" \\
@@ -270,6 +279,7 @@ process coverageMetrics {
 
     output:
     file("${sample_id}.sample_summary")
+    val 'complete' into coverage_out_ch
     
     shell:
     '''
@@ -277,6 +287,7 @@ process coverageMetrics {
     -t $SLURM_CPUS_ON_NODE \\
     -i !{bam} \\
     --interval !{params.bedFile} \\
+    -r !{params.reference} \\
     --algo CoverageMetrics \\
     --partition sample \\
     --omit_base_output \\
@@ -285,8 +296,6 @@ process coverageMetrics {
     "!{sample_id}"
     '''
 }
-
-// depthOfCoverage? indexCov?
 
 process graphBQSR {
     tag { sample_id }
@@ -299,6 +308,7 @@ process graphBQSR {
 
     output:
     file("${sample_id}.bqsr.pdf")
+    val 'complete' into graph_out_ch
 
     shell:
     '''
@@ -347,7 +357,7 @@ process haplotyper {
     '''
 } 
 
-Channel.from haplotyper_out_ch
+haplotyper_out_ch
     .toSortedList()
     .transpose()
     .first()
@@ -367,7 +377,7 @@ process gvcfTyper {
     inputGVCFs = gvcfs.join(' -v ')
     '''
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.np_cpus} \\
     -r !{params.reference} \\
     --interval !{params.bedFile} \\
     --algo GVCFtyper \\
@@ -376,7 +386,7 @@ process gvcfTyper {
     '''
 }
 
-Channel.from typed_ch
+typed_ch
     .unique()
     .toList()
     .set { chrTyped_ch }
@@ -395,7 +405,7 @@ process mergGVCFs {
     inputVCFs = chrFiles.join(' ')
 
     '''
-    bcftools concat --thread $SLURM_CPUS_ON_NODE -O z !{inputVCFs} -o "!{params.project}_merged.vcf.gz"
+    bcftools concat --thread !{params.np_cpus} -O z !{inputVCFs} -o "!{params.project}_merged.vcf.gz"
     tabix -p vcf "!{params.project}_merged.vcf.gz"
     '''
 }
@@ -511,25 +521,36 @@ process applyVarCalIndel {
 }
 applyedINDEL_ch.into { finalVCF_ch; vcfStats_ch }
 
-Channel.from fastqc_out_ch
+fastqc_out_ch
     .unique()
     .toList()
     .set { allFastqc_ch }
 
-Channel.from fastp_out_ch
+fastp_out_ch
     .unique()
     .toList()
     .set { allFastp_ch }
 
-Channel.from samStats_done_ch
+
+samStats_done_ch
     .unique()
     .toList()
     .set { allSamStats_ch }
 
-Channel.from samFlagstat_done_ch
+samFlagstat_done_ch
     .unique()
     .toList()
     .set { allFlagStats_ch }
+
+coverage_out_ch
+    .unique()
+    .toList()
+    .set { allCoverage_ch }
+
+graph_out_ch
+    .unique()
+    .toList()
+    .set { allGraph_ch }
 
 process finalStats {
     tag { "${params.project}" }
@@ -556,9 +577,12 @@ process finalVCF {
     input:
     set file(vcf), file(index) from finalVCF_ch
     val 'done' from finalStats_ch
+    val 'complete' from allFastqc_ch
     val 'complete' from allFastp_ch
     val 'complete' from allSamStats_ch
     val 'complete' from allFlagStats_ch
+    val 'complete' from allCoverage_ch
+    val 'complete' from allGraph_ch
 
     output:
     val 'complete' into finalVCF_out_ch
