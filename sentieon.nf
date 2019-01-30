@@ -1,11 +1,10 @@
 #!/usr/bin/nextflow
 
-// Log info.
+// Log info
 log.info "=================================="
 log.info "          Pezzolesi Lab           "
 log.info "           Sentieon PL            "
 log.info "=================================="
-log.info "Version: $params.version"
 log.info ""
 log.info "~~ With the following VQSR knowns ~~"
 log.info "reference: $params.reference "
@@ -20,10 +19,11 @@ log.info "1G snps: $params.snp_1G_par "
 log.info "1G indels: $params.indel_1G_par "
 log.info "mills indels: $params.indel_mills_par"
 log.info "~~ Using the following region bed files ~~"
+log.info "Wuxi: $params.bedFile"
 log.info "=================================="
 
-//gzippedFastqs_ch = Channel.fromPath( '/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/practiceData/double/*.fastq.gz' )
-gzippedFastqs_ch = Channel.fromPath( '/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/realData/*.fastq.gz' )
+gzippedFastqs_ch = Channel.fromPath( '/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/practiceData/double/*.fastq.gz' )
+//gzippedFastqs_ch = Channel.fromPath( '/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/realData/*.fastq.gz' )
 
 process unzipFastqs {
     tag { sample_read }
@@ -44,37 +44,16 @@ process unzipFastqs {
     """
     gunzip -c ${gzfq_file} > ${sample_read}.fastq
     """
-    //echo ${gzfq_file.baseName} > ${sample_read}.fastq
 }
-
-//fastqs_ch.into{ firstFq_ch; fastp_in_ch; fastqc_in_ch; groupFq_ch }
-/*
-process getSampleInfo {
-    tag { sample_read }
-
-    input:
-    set val(sample_id), val(sample_read), file(fq_file) from fastqs_ch
-
-    output:
-    set val(sample_id), file("${fq_file}"), file("${sample_read}.align.txt") into sampleInfo_ch
-
-    """
-    pezzAlign ${fq_file} > ${sample_read}.align.txt
-    """
-}
-*/
 
 fastqs_ch.into{ groupFq_ch; fastp_in_ch; fastqc_in_ch }
-//sampleInfo_ch.into{ bwa_in_ch; fastp_in_ch; fastqc_in_ch }
 
 process runFastp {
     tag { sample_read }
 
-    //publishDir '/scratch/general/lustre/u6013142/run-nf/results/fastp', mode: 'copy'
     publishDir "/scratch/general/lustre/u6013142/run-nf/results/fastp", mode: 'copy'
 
     input:
-    //set val(sample_read), val(_), val(fqPath) from bwa_in_ch.splitCsv().map{ id, _, path -> tuple(id, _, file(path))}
     set val(sample_id), val(sample_read), file(fq_file) from fastp_in_ch
 
     output:
@@ -93,14 +72,11 @@ process runFastp {
 process runFastqc {
     tag { sample_read }
 
-    //publishDir '/scratch/general/lustre/u6013142/run-nf/results/fastp', mode: 'copy'
-
     input:
     set val(sample_id), val(sample_read), file(fq_file) from fastqc_in_ch
 
     output:
     val 'complete' into fastqc_out_ch
-    //file("${sample_id}.${align_file.baseName}.fastqc.report
     
     shell:
     '''
@@ -116,7 +92,6 @@ process BWA {
     tag { sample_id }
 
     input:
-    //set val(sample_id), file(fq_file), file(alignFile) from bwa_in_ch
     set val(sample_id), file(sample_reads), file(fq_files) from sortFq_collect_ch
 
     output:
@@ -126,7 +101,6 @@ process BWA {
     fq1 = fq_files[0]
     fq2 = fq_files[1]
 
-    //export RGID=$(cat !{alignFile} | perl -F, -lane 'print $F[0]')
     '''
     export RG=$(pezzAlign !{fq1})
 
@@ -155,7 +129,6 @@ process dedup {
     set sample_id, file("${sample_id}.dedup.bam"), file("${sample_id}.dedup.bam.bai") into sentieonDedup_out_ch
 
     shell:
-    //bamList = sortbams.join(' -i ')
     '''
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
@@ -198,14 +171,12 @@ process indelRealigner {
 process BQSR {
     tag { sample_id }
 
-    //publishDir '/scratch/general/lustre/u6013142/run-nf/results/bam', mode: 'copy', pattern: '*.{bam,bai}'
     publishDir "${params.bam}", mode: 'copy', pattern: '*.{bam,bai}'
 
     input:
     set sample_id, file(realigned), file(index) from sentieonRealigner_out_ch
 
     output:
-    //set sample_id, file("${realigned.baseName}.realigned.bqsr.bam"), file("${realigned.baseName}.realigned.bqsr.bam.bai") into sentieonBQSR_out_ch
     set sample_id, file("${realigned.baseName}.realigned.bqsr.bam"), file("${realigned.baseName}.realigned.bqsr.bam.bai"), file("${realigned.baseName}.recal_data_table") into sentieonBQSR_out_ch
     set sample_id, file("${realigned.baseName}.recal_data_table"), file("${realigned.baseName}.recal_data.table.post") into sentieonBQSR_graph_out_ch
 
@@ -236,7 +207,6 @@ sentieonBQSR_out_ch.into{ haplotyper_in_ch; stats_in_ch; flagstat_in_ch ; covera
 process samStats {
     tag { sample_id }
 
-    //publishDir '/scratch/general/lustre/u6013142/run-nf/results/bam/stats', mode: 'copy'
     publishDir "${params.stats}", mode: 'copy'
 
     input:
@@ -254,7 +224,6 @@ process samStats {
 process samFlagstat {
     tag { sample_id }
 
-    //publishDir '/scratch/general/lustre/u6013142/run-nf/results/bam/stats', mode: 'copy'
     publishDir "${params.stats}", mode: 'copy'
 
     input:
@@ -300,7 +269,6 @@ process coverageMetrics {
 process graphBQSR {
     tag { sample_id }
 
-    //publishDir '/scratch/general/lustre/u6013142/run-nf/results/bqsr', mode: 'copy'
     publishDir "${params.bqsr}", mode: 'copy'
 
     input:
@@ -322,23 +290,20 @@ process graphBQSR {
 
     sentieon plot bqsr \\
     -o "!{sample_id}.bqsr.pdf" \\
-    "!{sample_id}.recal.result.csv" \\
+    "!{sample_id}.recal.result.csv"
     '''
 }
 
 process haplotyper {
     tag { sample_id }
 
-    //publishDir '/scratch/general/lustre/u6013142/run-nf/results/gvcf', mode: 'copy'
     publishDir "${params.gvcf}", mode: 'copy'
 
     input:
-    //set sample_id, file(recalbam), file(index) from haplotyper_in_ch
     set sample_id, file(recalbam), file(index), file(recalTable) from haplotyper_in_ch
 
     output:
     set file("${sample_id}.g.vcf.gz"), file("${sample_id}.g.vcf.gz.tbi") into haplotyper_out_ch
-    //set file("${sample_id}.g.vcf.gz") into haplotyper_out_ch
 
     shell:
     '''
@@ -350,7 +315,7 @@ process haplotyper {
     --algo Haplotyper \\
     --emit_mode gvcf \\
     -d !{params.dbsnp} \\
-    "!{sample_id}.g.vcf"
+    "!{sample_id}.g.vcf" \\
 
     bgzip -c "!{sample_id}.g.vcf" > "!{sample_id}.g.vcf.gz"
     tabix -p vcf "!{sample_id}.g.vcf.gz"
@@ -368,7 +333,6 @@ process gvcfTyper {
 
     input:
     val gvcfs from gvcfCollect_ch
-    //set val(bed, file(bedFile) from regionInput
 
     output:
     file ("${params.project}.g.vcf.gz") into typed_ch
@@ -391,7 +355,7 @@ typed_ch
     .toList()
     .set { chrTyped_ch }
 
-process mergGVCFs {
+process mergeGVCFs {
     tag { "$params.project" }
 
     input:
@@ -497,7 +461,6 @@ process varCalIndel {
 process applyVarCalIndel {
     tag { "$params.project" }
 
-    //publishDir '/scratch/general/lustre/u6013142/run-nf/results/vcf', mode: 'copy'
     publishDir "${params.vcf}", mode: 'copy'
 
     input:
@@ -555,7 +518,6 @@ graph_out_ch
 process finalStats {
     tag { "${params.project}" }
 
-    //publishDir '/scratch/general/lustre/u6013143/run-nf/results/vcf/stats', mode: 'copy'
     publishDir "${params.vcfstats}", mode: 'copy'
 
     input:
@@ -563,7 +525,7 @@ process finalStats {
 
     output:
     file("${params.project}_FinalVCF.stats" )
-    val 'done' into finalStats_ch
+    val 'complete' into finalStats_ch
 
     shell:
     '''
@@ -571,12 +533,13 @@ process finalStats {
     '''
 }
 
-process finalVCF {
+process multiqc {
     tag { "$params.project" }
 
+    publishDir "${params.multiqc}", mode: 'copy'
+
     input:
-    set file(vcf), file(index) from finalVCF_ch
-    val 'done' from finalStats_ch
+    val 'complete' from finalStats_ch
     val 'complete' from allFastqc_ch
     val 'complete' from allFastp_ch
     val 'complete' from allSamStats_ch
@@ -585,35 +548,38 @@ process finalVCF {
     val 'complete' from allGraph_ch
 
     output:
-    val 'complete' into finalVCF_out_ch
-
-    shell:
-    '''
-    export EPOCH=$(date +%s)
-
-    ls "!{params.project}_complete.vcf.gz" | \\
-    perl -lane '$orig = $_; $_ =~ s|complete.vcf.gz|Final_$ENV{EPOCH}.vcf.gz|; system "cp $orig $_"'
-
-    ls "!{params.project}_complete.vcf.gz.tbi" | \\
-    perl -lane '$orig = $_; $_ =~ s|complete.vcf.gz.tbi|Final_$ENV{EPOCH}.vcf.gz.tbi|; system "cp $orig $_"'
-    '''
-}
-process multiqc {
-    tag { "$params.project" }
-
-    //publishDir '/scratch/general/lustre/u6013143/run-nf/results/', mode: 'copy'
-    publishDir "${params.multiqc}", mode: 'copy'
-
-    input:
-    val 'complete' from finalVCF_out_ch
-
-    output:
     file("${params.project}.multiqc.report.html")
 
     """
     multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
     """
-    //multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
+}
+
+process annotateFinalVCF {
+    tag { "$params.project" }
+
+    publishDir "${params.annotatedVCF}", mode: 'copy'
+
+    input:
+    set file(vcf), file(index) from finalVCF_ch
+
+    output:
+    file("${params.project}_complete.hg19_multianno.vcf")
+
+    shell:
+    //~/modules/annovar/table_annovar.pl \\
+    '''
+    table_annovar.pl \\
+        !{vcf} \\
+        $HOME/modules/annovar/humandb/ \\
+        --buildver hg19 \\
+        --out !{params.project}_complete \\
+        --remove \\
+        --protocol refGene,ensGene,knownGene,dbnsfp30a,gnomad_genome,exac03 \\
+        --operation g,g,g,f,f,f \\
+        --nastring . \\
+        --vcfinput
+    '''
 }
 
 workflow.onComplete {
