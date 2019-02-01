@@ -55,25 +55,12 @@ process runFastp {
     file("${sample_id}.fastp.report.html")
 
     shell:
+
     fq1 = fq_files[0]
     fq2 = fq_files[1]
     read1 = read_nums[0]
     read2 = read_nums[1]
-    //if (fq_files[0].toString().contains("_R1.")) {
-    //    fq1 = fq_files[0]
-    //    fq2 = fq_files[1]
-    //} else {
-    //    fq2 = fq_files[0]
-    //    fq1 = fq_files[1]
-    //} 
 
-    //if (read_nums[0] == "R1") {
-    //    read1 = read_nums[0]
-    //    read2 = read_nums[1]
-    //} else {
-    //    read1 = read_nums[1]
-    //    read2 = read_nums[0]
-    //}
     '''
     fastp \\
     --thread !{params.kp_cpus} \\
@@ -138,6 +125,7 @@ process BWA {
     set sample_id, file("${sample_id}.sorted.bam"), file("${sample_id}.sorted.bam.bai") into bwa_out
 
     shell:
+
     fq1 = fq_files[0]
     fq2 = fq_files[1]
 
@@ -282,6 +270,7 @@ process samStats {
     set sample_id, file(bam), file(index), file(recal_table) from stats_in
 
     output:
+
     file("${sample_id}.stats")
     val 'complete' into samStats_done
 
@@ -379,7 +368,9 @@ process gvcfTyper {
     file ("${params.project}.g.vcf.gz") into gvcfTyper_out
 
     shell:
+
     inputGVCFs = gvcfs.join(' -v ')
+
     '''
     sentieon driver \\
     -t !{params.np_cpus} \\
