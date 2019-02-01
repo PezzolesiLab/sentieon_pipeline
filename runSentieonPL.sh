@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH --time=1-07:30:00
+#SBATCH --time=3-00:00:00
 #SBATCH --nodes=1
 #SBATCH -o pipelineKickOff-%j.out
 #SBATCH -e pipelineKickOff-%j.err

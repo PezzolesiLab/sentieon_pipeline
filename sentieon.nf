@@ -24,6 +24,7 @@ log.info "~~ Software dependencies ~~"
 log.info "ANNOVAR"
 log.info "fastp/0.19.6"
 log.info "multiqc/1.7"
+log.info ""
 log.info "=================================="
 
 // Get sample name, samples are split into forward and reverse reads
@@ -70,7 +71,7 @@ process runFastp {
     --length_required 25 \\
     --low_complexity_filter 5 \\
     --detect_adapter_for_pe \\
-    --html "!{sample_id}.fastp.report.html" \\
+    --html "!{sample_id}.fastp.report.html"
     '''
 }
 
@@ -129,7 +130,7 @@ process BWA {
     fq2 = fq_files[1]
 
     '''
-    export RG=$(pezzAlign !{fq1} !{params.dataDir)
+    export RG=$(pezzAlign !{fq1})
 
     ( bwa mem -M \\
     -R $RG \\
@@ -344,7 +345,7 @@ process haplotyper {
     --algo Haplotyper \\
     --emit_mode gvcf \\
     -d !{params.dbsnp} \\
-    "!{sample_id}.g.vcf" \\
+    "!{sample_id}.g.vcf"
 
     bgzip -c "!{sample_id}.g.vcf" > "!{sample_id}.g.vcf.gz"
     tabix -p vcf "!{sample_id}.g.vcf.gz"
