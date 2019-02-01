@@ -26,10 +26,9 @@ log.info "fastp/0.19.6"
 log.info "multiqc/1.7"
 log.info "=================================="
 
-//.fromPath( '/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/realData/*.fastq.gz' )
 // Get sample name, samples are split into forward and reverse reads
 idReadFq = Channel
-    .fromPath( '/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/practiceData/double/*.fastq.gz' )
+    .fromPath( "${params.dataDir}" )
     .map { file ->
         fName = file.baseName
         fName2 = fName.replaceAll("LU01-", "LU01_")
@@ -130,7 +129,7 @@ process BWA {
     fq2 = fq_files[1]
 
     '''
-    export RG=$(pezzAlign !{fq1})
+    export RG=$(pezzAlign !{fq1} !{params.dataDir)
 
     ( bwa mem -M \\
     -R $RG \\

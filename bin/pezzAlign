@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 
 file=$1
-
-#fullPath="/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/realData"
-fullPath="/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/practiceData/double"
-#fullPath="/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/practiceData/single"
-#fullPath="/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/practiceData/gathered"
+path=$2
 
 # DEPRICATED: some of our samples have a "-" in them so it wont work to split the filename by "-". Have to replace the first occurrence
 # of "-" with "_"
@@ -29,7 +25,7 @@ lane=${fcLn[1]}
 # create the readgroup string
 rg=$(echo "@RG\tID:$id.$flowcell.$lane\tSM:$id\tPL:ILLUMINA\tPU:$flowcell.$lane\tLB:$id")
 # create the output line that will be consumed by a nextflow channel
-line=$(echo "$rg,$fullPath/$file")
+line=$(echo "$rg,$path/$file")
 
 #echo $line
 echo $rg
