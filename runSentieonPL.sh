@@ -6,9 +6,9 @@
 #SBATCH -e pipelineKickOff-%j.err
 #SBATCH --mail-user=scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
-#SBATCH --account=pezzolesi-np
-#SBATCH --partition=pezzolesi-np
-##SBATCH --partition=notchpeak
+#SBATCH --account=pezzolesi
+#SBATCH --partition=ember
+##SBATCH --partition=pezzolesi-np
 
 resume=$1
 SLURM_CLUSTERS="kingspeak"

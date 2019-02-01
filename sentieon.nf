@@ -46,6 +46,7 @@ process runFastp {
     tag { sample_id }
 
     publishDir "${params.fastp}", mode: 'copy', pattern: '*.html'
+    echo true
 
     input:
     set val(sample_id), val(read_nums), file(fq_files) from fastp_in
