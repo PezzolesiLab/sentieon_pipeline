@@ -26,13 +26,13 @@ gzippedFastqs_ch = Channel.fromPath( '/uufs/chpc.utah.edu/common/home/u6013142/p
 //gzippedFastqs_ch = Channel.fromPath( '/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/realData/*.fastq.gz' )
 
 process unzipFastqs {
-    tag { sample_read }
+    tag { sample_id + "_" + read_num }
 
     input:
     file gzfq_file from gzippedFastqs_ch
 
     output:
-    set val(sample_id), val(sample_read), file("${sample_read}.fastq") into fastqs_ch
+    set val(sample_id), val(read_num), file("${sample_id}_${read_num}.fastq") into fastqs_ch
 
     script:
     // Get sample name, samples are split into forward and reverse reads
@@ -40,40 +40,69 @@ process unzipFastqs {
     fileName_v2 = fileName.replaceAll("LU01-", "LU01_")
     sample_id = fileName_v2.tokenize('.')[0].tokenize('_')[1]
     read_num = fileName_v2.tokenize('.')[0].tokenize('_')[3]
-    sample_read = sample_id + "_" + read_num
     """
-    gunzip -c ${gzfq_file} > ${sample_read}.fastq
+    gunzip -c ${gzfq_file} > ${sample_id}_${read_num}.fastq
     """
 }
 
-fastqs_ch.into{ groupFq_ch; fastp_in_ch; fastqc_in_ch }
+fastqs_ch
+    .groupTuple()
+    .set { fastp_in_ch }
 
 process runFastp {
-    tag { sample_read }
+    tag { sample_id }
 
-    publishDir "/scratch/general/lustre/u6013142/run-nf/results/fastp", mode: 'copy'
+    publishDir "${params.fastp}", mode: 'copy', pattern: '*.html'
 
     input:
-    set val(sample_id), val(sample_read), file(fq_file) from fastp_in_ch
+    set val(sample_id), val(read_nums), file(fq_files) from fastp_in_ch
 
     output:
-    val 'complete' into fastp_out_ch
-    file("${sample_read}.fastp.report.html")
+    set val(sample_id), val(read1), file("${sample_id}_${read1}.trimmed.fastq.gz"), val(sample_id), val(read2), file("${sample_id}_${read2}.trimmed.fastq.gz") into fastp_out_ch
+    file("${sample_id}.fastp.report.html")
 
     shell:
+    if (fq_files[0].toString().contains("_R1.")) {
+        fq1 = fq_files[0]
+        fq2 = fq_files[1]
+    } else {
+        fq2 = fq_files[0]
+        fq1 = fq_files[1]
+    } 
+
+    if (read_nums[0] == "R1") {
+        read1 = read_nums[0]
+        read2 = read_nums[1]
+    } else {
+        read1 = read_nums[1]
+        read2 = read_nums[0]
+    }
     '''
     fastp \\
     --thread !{params.kp_cpus} \\
-    --in1 !{fq_file} \\
-    --html "!{sample_read}.fastp.report.html" \\
+    --in1 !{fq1} \\
+    --in2 !{fq2} \\
+    --out1 "!{sample_id}_!{read1}.trimmed.fastq.gz" \\
+    --out2 "!{sample_id}_!{read2}.trimmed.fastq.gz" \\
+    --length_required 25 \\
+    --low_complexity_filter 5 \\
+    --detect_adapter_for_pe \\
+    --html "!{sample_id}.fastp.report.html" \\
     '''
 }
 
+fastp_out_ch
+    .flatten()
+    .collate( 3 )
+    .set { collated_ch }
+
+collated_ch.into { fastqc_in_ch; group_fq_ch }
+
 process runFastqc {
-    tag { sample_read }
+    tag { sample_id + "_" + read_num }
 
     input:
-    set val(sample_id), val(sample_read), file(fq_file) from fastqc_in_ch
+    set val(sample_id), val(read_num), file(fq_file) from fastqc_in_ch
 
     output:
     val 'complete' into fastqc_out_ch
@@ -84,18 +113,18 @@ process runFastqc {
     '''
 }
 
-groupFq_ch
+group_fq_ch
     .groupTuple()
-    .set { sortFq_collect_ch }
+    .set { bwa_in_ch }
     
 process BWA {
     tag { sample_id }
 
     input:
-    set val(sample_id), file(sample_reads), file(fq_files) from sortFq_collect_ch
+    set val(sample_id), file(read_nums), file(fq_files) from bwa_in_ch
 
     output:
-    set sample_id, file("${sample_id}.sorted.bam"), file("${sample_id}.sorted.bam.bai") into sentieonBWA_out_ch
+    set sample_id, file("${sample_id}.sorted.bam"), file("${sample_id}.sorted.bam.bai") into bwa_out_ch
 
     shell:
     fq1 = fq_files[0]
@@ -115,7 +144,7 @@ process BWA {
     | sentieon util sort \\
     -o "!{sample_id}.sorted.bam" \\
     -t $SLURM_CPUS_ON_NODE \\
-    --sam2bam -i -
+    --sam2bam -i - \\
     '''
 }
 
@@ -123,10 +152,10 @@ process dedup {
     tag { sample_id }
 
     input:
-    set sample_id, file(bam), file(index) from sentieonBWA_out_ch
+    set sample_id, file(bam), file(index) from bwa_out_ch
 
     output:
-    set sample_id, file("${sample_id}.dedup.bam"), file("${sample_id}.dedup.bam.bai") into sentieonDedup_out_ch
+    set sample_id, file("${sample_id}.dedup.bam"), file("${sample_id}.dedup.bam.bai") into dedup_out_ch
 
     shell:
     '''
@@ -150,10 +179,10 @@ process indelRealigner {
     tag { sample_id }
 
     input:
-    set sample_id, file(deduped), file(index) from sentieonDedup_out_ch
+    set sample_id, file(deduped), file(index) from dedup_out_ch
 
     output:
-    set sample_id, file("${deduped.baseName}.realigned.bam"), file("${deduped.baseName}.realigned.bam.bai") into sentieonRealigner_out_ch
+    set sample_id, file("${deduped.baseName}.realigned.bam"), file("${deduped.baseName}.realigned.bam.bai") into realigner_out_ch
 
     shell:
     '''
@@ -174,11 +203,11 @@ process BQSR {
     publishDir "${params.bam}", mode: 'copy', pattern: '*.{bam,bai}'
 
     input:
-    set sample_id, file(realigned), file(index) from sentieonRealigner_out_ch
+    set sample_id, file(realigned), file(index) from realigner_out_ch
 
     output:
-    set sample_id, file("${realigned.baseName}.realigned.bqsr.bam"), file("${realigned.baseName}.realigned.bqsr.bam.bai"), file("${realigned.baseName}.recal_data_table") into sentieonBQSR_out_ch
-    set sample_id, file("${realigned.baseName}.recal_data_table"), file("${realigned.baseName}.recal_data.table.post") into sentieonBQSR_graph_out_ch
+    set sample_id, file("${realigned.baseName}.realigned.bqsr.bam"), file("${realigned.baseName}.realigned.bqsr.bam.bai"), file("${realigned.baseName}.recal_data_table") into bqsr_out_ch
+    set sample_id, file("${realigned.baseName}.recal_data_table"), file("${realigned.baseName}.recal_data.table.post") into bqsr_graph_out_ch
 
     shell:
     '''
@@ -202,7 +231,7 @@ process BQSR {
     '''
 }
 
-sentieonBQSR_out_ch.into{ haplotyper_in_ch; stats_in_ch; flagstat_in_ch ; coverageMetrics_in_ch }
+bqsr_out_ch.into{ haplotyper_in_ch; stats_in_ch; flagstat_in_ch ; coverageMetrics_in_ch }
 
 process samStats {
     tag { sample_id }
@@ -272,7 +301,7 @@ process graphBQSR {
     publishDir "${params.bqsr}", mode: 'copy'
 
     input:
-    set sample_id, file(table), file(post) from sentieonBQSR_graph_out_ch
+    set sample_id, file(table), file(post) from bqsr_graph_out_ch
 
     output:
     file("${sample_id}.bqsr.pdf")
@@ -489,12 +518,6 @@ fastqc_out_ch
     .toList()
     .set { allFastqc_ch }
 
-fastp_out_ch
-    .unique()
-    .toList()
-    .set { allFastp_ch }
-
-
 samStats_done_ch
     .unique()
     .toList()
@@ -541,7 +564,6 @@ process multiqc {
     input:
     val 'complete' from finalStats_ch
     val 'complete' from allFastqc_ch
-    val 'complete' from allFastp_ch
     val 'complete' from allSamStats_ch
     val 'complete' from allFlagStats_ch
     val 'complete' from allCoverage_ch

@@ -11,7 +11,7 @@
 ##SBATCH --partition=notchpeak
 
 resume=$1
-SLURM_CLUSTERS="ash"
+SLURM_CLUSTERS="kingspeak"
 export SLURM_CLUSTERS
 
 if [[ $resume == "resume" ]]; then
