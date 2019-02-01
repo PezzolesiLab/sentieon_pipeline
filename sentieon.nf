@@ -23,6 +23,7 @@ log.info "Wuxi: $params.bedFile"
 log.info "~~ Software dependencies ~~"
 log.info "ANNOVAR"
 log.info "fastp/0.19.6"
+log.info "multiqc/1.7"
 log.info "=================================="
 
 //.fromPath( '/uufs/chpc.utah.edu/common/home/u6013142/projects/eGFR/nextflow_variant_discovery/realData/*.fastq.gz' )
