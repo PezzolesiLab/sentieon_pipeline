@@ -144,8 +144,9 @@ process BWA {
     | sentieon util sort \\
     -o "!{sample_id}.sorted.bam" \\
     -t $SLURM_CPUS_ON_NODE \\
-    --sam2bam -i - \\
+    --sam2bam -i -
     '''
+
 }
 
 process dedup {
