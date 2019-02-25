@@ -6,3 +6,5 @@ realData/
 test*/
 practiceData/
 filtering/
+.DS*
+._.DS*

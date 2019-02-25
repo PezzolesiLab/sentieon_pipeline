@@ -95,8 +95,8 @@ process runFastqc {
     input:
     set val(sample_id), val(read_num), file(fq_file) from fastqc_in
 
-    output:
-    val 'complete' into fastqc_done
+    //output:
+    //val 'complete' into fastqc_done
     
     shell:
     '''
@@ -238,7 +238,8 @@ process BQSR {
     '''
 }
 
-bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in; haplotyper_in }
+//bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in; haplotyper_in }
+bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in }
 
 process graphBQSR {
     tag { sample_id }
@@ -250,7 +251,7 @@ process graphBQSR {
 
     output:
     file("${sample_id}.bqsr.pdf")
-    val 'complete' into graph_done
+    //val 'complete' into graph_done
 
     shell:
     '''
@@ -277,9 +278,8 @@ process samStats {
     set sample_id, file(bam), file(index), file(recal_table) from stats_in
 
     output:
-
     file("${sample_id}.stats")
-    val 'complete' into samStats_done
+    //val 'complete' into samStats_done
 
     """
     samtools stats ${bam} > "${sample_id}.stats"
@@ -296,7 +296,7 @@ process samFlagstat {
 
     output:
     file("${sample_id}.flagstat")
-    val 'complete' into samFlagstat_done
+    //val 'complete' into samFlagstat_done
 
     """
     samtools flagstat ${bam} > "${sample_id}.flagstat"
@@ -313,7 +313,7 @@ process coverageMetrics {
 
     output:
     file("${sample_id}.sample_summary")
-    val 'complete' into coverage_done
+    //val 'complete' into coverage_done
     
     shell:
     '''
@@ -331,6 +331,7 @@ process coverageMetrics {
     '''
 }
 
+/*
 process haplotyper {
     tag { sample_id }
 
@@ -612,6 +613,7 @@ process multiqc {
     """
 }
 
+*/
 workflow.onComplete {
     println "Pipeline completed at: $workflow.complete"
     println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"

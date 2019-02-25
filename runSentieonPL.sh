@@ -11,24 +11,25 @@
 ##SBATCH --partition=ember
 
 resume=$1
-SLURM_CLUSTERS="kingspeak"
-export SLURM_CLUSTERS
+scratchDir=$scr/missingBams
+#SLURM_CLUSTERS="kingspeak"
+#export SLURM_CLUSTERS
 
 if [[ $resume == "resume" ]]; then
-    if [ -d $scr/run-nf ]; then
-        cd $scr/run-nf
+    if [ -d $scratchDir ]; then
+        cd $scratchDir
         echo "RESUMING"
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf -resume
     else
         echo "There's nothing to resume (scratch directory doesn't exist)"
     fi
 elif [[ $resume == "new" ]]; then
-    if [ ! -d $scr/run-nf ]; then
+    if [ ! -d $scratchDir ]; then
         echo "STARTING FRESH"
-        mkdir -p $scr/run-nf/{results/{fastp,fastqc,bqsr,bam/{stats,coverage},gvcf,vcf/stats},bin}
-        cp ./sentieon.nf ./nextflow.config $scr/run-nf
-        cp ./bin/pezzAlign $scr/run-nf/bin
-        cd $scr/run-nf
+        mkdir -p $scratchDir/{results/{fastp,fastqc,bqsr,bam/{stats,coverage},gvcf,vcf/stats},bin}
+        cp ./sentieon.nf ./nextflow.config $scratchDir
+        cp ./bin/pezzAlign $scratchDir/bin
+        cd $scratchDir
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf
     else
         echo "A project already exists. Delete it and start over or resume it"
