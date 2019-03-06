@@ -34,6 +34,67 @@ log.info ""
 log.info "=================================="
 
 // Get sample name, samples are split into forward and reverse reads
+
+if (params.isDmuxNeeded) {
+    
+    // read in
+    // demultiplex - both
+    // trim - both
+    //
+    // how to delete irrelevant fastqs - parse barcode file
+    // how to rename the fastqs. With python script or not?
+
+  libraryReadLaneFq = Channel
+    .fromPath( "${params.dataDir}" )
+    .map { file ->
+        fNameExt = file.baseName
+        fName = fNameExt.tokenize('.')[0]
+        library = fName.tokenize('_')[0]
+        lane = fName.tokenize('_')[6]
+        read_num = fName.tokenize('_')[7]
+        [ library, read_num, lane, file ]
+    }
+
+  libraryReadLaneFq
+      .groupTuple()
+      .set { demux_in }
+
+  process demuxFq {
+      tag { library + "_" + lane }
+
+      input:
+      set val(library), val(read_nums), val(lanes), file(fq_files) from demux_in
+
+      output:
+      set val(library), val(read1), val(lane), file("${library}_${read1}_${lane}.*.fastq.gz") into demux_out1
+      set val(library), val(read2), val(lane), file("${library}_${read2}_${lane}.*.fastq.gz") into demux_out2
+
+      shell:
+
+      fq1 = fq_files[0]
+      fq2 = fq_files[1]
+      read1 = read_nums[0]
+      read2 = read_nums[1]
+      lane = lanes[0]
+
+      '''
+      fastq-multx \\
+      -b \\
+      -B !{params.barcodeFile} \\
+      !{fq1} \\
+      !{fq2} \\
+      -o !{library}_!{read1}_!{lane}.%.fastq.gz \\
+      -o !{library}_!{read2}_!{lane}.%.fastq.gz
+      '''
+  }
+
+  demux_out1.join(demux_out2).println()
+
+  // START HERE 3/5/19: trim both w/ cutadapt
+}
+
+
+// specific to UDDCS samples sequenced by WuXi
 idReadFq = Channel
     .fromPath( "${params.dataDir}" )
     .map { file ->
@@ -52,7 +113,6 @@ process runFastp {
     tag { sample_id }
 
     publishDir "${params.fastp}", mode: 'copy', pattern: '*.html'
-    echo true
 
     input:
     set val(sample_id), val(read_nums), file(fq_files) from fastp_in

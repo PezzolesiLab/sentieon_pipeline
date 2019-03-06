@@ -1,10 +1,10 @@
 .nextflow*
 old/
-realData/
 *.err
 *.out
 test*/
-practiceData/
+practice*/
+real*/
 filtering/
 .DS*
 ._.DS*
