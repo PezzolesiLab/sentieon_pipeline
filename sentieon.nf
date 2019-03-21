@@ -41,6 +41,7 @@ log.info """\
 """
 
 demuxing = params.isDemuxNeeded
+interval = params.isIntervalNeeded
 
 if ( demuxing ) {
     
