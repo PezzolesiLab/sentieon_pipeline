@@ -1,145 +1,234 @@
 #!/usr/bin/nextflow
 
-// Log info
-log.info "=================================="
-log.info "          Pezzolesi Lab           "
-log.info "           Sentieon PL            "
-log.info "=================================="
-log.info ""
-log.info "~~ With the following VQSR knowns ~~"
-log.info "reference: $params.reference "
-log.info "dbsnp: $params.dbsnp "
-log.info "hapmap: $params.hapmap"
-log.info "1G snps: $params.snp_1G"
-log.info "1G indels: $params.indel_1G "
-log.info "mills indels: $params.indel_mills"
-log.info "~~ Set to the following parameters ~~"
-log.info "hapmap: $params.hapmap_par "
-log.info "1G snps: $params.snp_1G_par "
-log.info "1G indels: $params.indel_1G_par "
-log.info "mills indels: $params.indel_mills_par"
-log.info "~~ Using the following region bed files ~~"
-log.info "Wuxi: $params.bedFile"
-log.info "~~ Software dependencies ~~"
-log.info "ANNOVAR"
-log.info "fastp/0.19.6"
-log.info "multiqc/1.7"
-log.info "~~ Modules Needed ~~"
-log.info "bcftools/1.7"
-log.info "bgzip/1.7"
-log.info "samtools/1.7"
-log.info "tabix/1.7"
-log.info "sentieon/201711.05"
-log.info ""
-log.info "=================================="
-
-// Get sample name, samples are split into forward and reverse reads
-
-if (params.isDmuxNeeded) {
+log.info """\
+    ==================================
+              Pezzolesi Lab           
+               Sentieon PL            
+    ==================================
     
-    // read in
-    // demultiplex - both
-    // trim - both
-    //
-    // how to delete irrelevant fastqs - parse barcode file
-    // how to rename the fastqs. With python script or not?
+    -- With the following VQSR knowns --
+       reference: $params.reference 
+       dbsnp: $params.dbsnp 
+       hapmap: $params.hapmap
+       1G snps: $params.snp_1G
+       1G indels: $params.indel_1G 
+       mills indels: $params.indel_mills
 
-  libraryReadLaneFq = Channel
-    .fromPath( "${params.dataDir}" )
-    .map { file ->
-        fNameExt = file.baseName
-        fName = fNameExt.tokenize('.')[0]
-        library = fName.tokenize('_')[0]
-        lane = fName.tokenize('_')[6]
-        read_num = fName.tokenize('_')[7]
-        [ library, read_num, lane, file ]
+    -- Set to the following parameters --
+       hapmap: $params.hapmap_par 
+       1G snps: $params.snp_1G_par 
+       1G indels: $params.indel_1G_par 
+       mills indels: $params.indel_mills_par
+
+    -- Using the following region bed files --
+       Wuxi: $params.bedFile
+
+    -- Software dependencies --
+       annovar (currently pointing to my copy)
+       fastp/0.19.6
+       multiqc/1.7
+       cutadapt/1.6 or higher
+       fastq-multx/1.3.1
+
+    -- Modules Needed --
+       bcftools/1.7
+       bgzip/1.7
+       samtools/1.7
+       tabix/1.7
+       sentieon/201711.05
+    
+    ==================================
+"""
+
+demuxing = params.isDemuxNeeded
+
+if ( demuxing ) {
+    
+    libraryReadLaneFq = Channel
+      .fromPath( "${params.dataDir}" )
+      .map { file ->
+          fNameExt = file.baseName
+          fName    = fNameExt.tokenize('.')[0]
+          library  = fName.tokenize('_')[0]
+          lane     = fName.tokenize('_')[6]
+          read_num = fName.tokenize('_')[7]
+          [ library, read_num, lane, file ]
+      }
+
+    libraryReadLaneFq
+        .groupTuple()
+        .set { demux_in }
+
+    process demuxFq {
+        tag { library + "_" + lane }
+
+        input:
+        set val(library), val(reads), val(lanes), val(fqs) from demux_in
+
+        output:
+        set val("${library}_${r1}_${lane}"), file("${library}_${r1}_${lane}.*.fastq.gz"), val("${library}_${r2}_${lane}"), file("${library}_${r2}_${lane}.*.fastq.gz") into demux_out
+
+        shell:
+
+        fq1  = fqs[0]
+        fq2  = fqs[1]
+        r1   = reads[0]
+        r2   = reads[1]
+        lane = lanes[0]
+
+        '''
+        fastq-multx \\
+        -x \\
+        -b \\
+        -B !{params.barcodeFile} \\
+        !{fq1} \\
+        !{fq2} \\
+        -o !{library}_!{r1}_!{lane}.%.fastq.gz \\
+        -o !{library}_!{r2}_!{lane}.%.fastq.gz
+        '''
     }
 
-  libraryReadLaneFq
-      .groupTuple()
-      .set { demux_in }
+    demux_out
+      .transpose()
+      .filter { it[1] =~ /bc[0][1-2]/ }
+      .set{ trim_in }
 
-  process demuxFq {
-      tag { library + "_" + lane }
+    process trimReads {
+      tag { library1 + "_" + barcode1 }
 
       input:
-      set val(library), val(read_nums), val(lanes), file(fq_files) from demux_in
+      set val(library_read_lane1), file(fq_file1), val(library_read_lane2), file(fq_file2) from trim_in
 
       output:
-      set val(library), val(read1), val(lane), file("${library}_${read1}_${lane}.*.fastq.gz") into demux_out1
-      set val(library), val(read2), val(lane), file("${library}_${read2}_${lane}.*.fastq.gz") into demux_out2
+      set val("${library1}_${r1}_${lane1}_${barcode1}"), file("${library}_${r1}_${lane}_${barcode1}.nobc.fastq.gz"), val(r1), file("${library2}_${r2}_${lane2}_${barcode2}.nobc.fastq.gz"), val(r2) into trim_out
 
       shell:
 
-      fq1 = fq_files[0]
-      fq2 = fq_files[1]
-      read1 = read_nums[0]
-      read2 = read_nums[1]
-      lane = lanes[0]
+      fName1   = fq_file1.baseName
+      barcode1 = fName1.tokenize('.')[1]
+      library1 = library_read_lane1.tokenize('_')[0]
+      r1       = library_read_lane1.tokenize('_')[1]
+      lane1    = library_read_lane1.tokenize('_')[2]
+
+      fName2   = fq_file2.baseName
+      barcode2 = fName2.tokenize('.')[1]
+      library2 = library_read_lane2.tokenize('_')[0]
+      r2       = library_read_lane2.tokenize('_')[1]
+      lane2    = library_read_lane2.tokenize('_')[2]
 
       '''
-      fastq-multx \\
-      -b \\
-      -B !{params.barcodeFile} \\
-      !{fq1} \\
-      !{fq2} \\
-      -o !{library}_!{read1}_!{lane}.%.fastq.gz \\
-      -o !{library}_!{read2}_!{lane}.%.fastq.gz
+      cutadapt \\
+      -u 6 \\
+      -U 6 \\
+      -j $SLURM_CPUS_ON_NODE \\
+      -o "!{library1}_!{r1}_!{lane1}_!{barcode1}.nobc.fastq.gz" \\
+      -p "!{library2}_!{r2}_!{lane2}_!{barcode2}.nobc.fastq.gz" \\
+      !{fq_file1} \\
+      !{fq_file2}
       '''
-  }
-
-  demux_out1.join(demux_out2).println()
-
-  // START HERE 3/5/19: trim both w/ cutadapt
-}
-
-
-// specific to UDDCS samples sequenced by WuXi
-idReadFq = Channel
-    .fromPath( "${params.dataDir}" )
-    .map { file ->
-        fName = file.baseName
-        fName2 = fName.replaceAll("LU01-", "LU01_")
-        id = fName2.tokenize('.')[0].tokenize('_')[1]
-        read_num = fName2.tokenize('.')[0].tokenize('_')[3]
-        [ id, read_num, file ]
     }
 
-idReadFq
-    .groupTuple()
-    .set { fastp_in }
+    sampleNamesBarcodeKey = Channel
+      .fromPath( "${params.sampleKey}" )
+      .splitCsv(header: true)
+      .map { row -> tuple(row.Library + "_" + row.Read + "_L" + row.Lane + "_" + row.Barcode_ID, row.Sample_ID) }
+      .filter { it[0] =~ /bc[0][1-2]/ }
 
-process runFastp {
+    trim_out.join(sampleNamesBarcodeKey).flatten().buffer(size:5, skip:1).set{ rename_in }
+
+    rename_in
+      .map { renameList -> 
+          myfq1 = file(renameList[0])
+          r1    = renameList[1]
+          newid = renameList[4]
+          dir1  = myfq1.getParent()
+          newName1 = "${dir1}/${newid}_${r1}.fastq.gz"
+          myfq1.copyTo(newName1)
+
+          myfq2 = file(renameList[2])
+          r2    = renameList[3]
+          dir2  = myfq2.getParent()
+          newName2 = "${dir2}/${newid}_${r2}.fastq.gz"
+          myfq2.copyTo(newName2)
+          [ newid, tuple(r1, r2), tuple(newName1, newName2) ]
+      }
+      .set { fastp_in }
+
+} else {
+
+    // specific to UDDCS samples sequenced by WuXi
+    idReadFq = Channel
+        .fromPath( "${params.dataDir}" )
+        .map { file ->
+            fName = file.baseName
+            fName2 = fName.replaceAll("LU01-", "LU01_")
+            id = fName2.tokenize('.')[0].tokenize('_')[1]
+            read_num = fName2.tokenize('.')[0].tokenize('_')[3]
+            [ id, read_num, file ]
+        }
+    
+    idReadFq
+        .groupTuple()
+        .set { fastp_in }
+  
+}
+
+process runfastp {
     tag { sample_id }
 
     publishDir "${params.fastp}", mode: 'copy', pattern: '*.html'
 
     input:
-    set val(sample_id), val(read_nums), file(fq_files) from fastp_in
+    set val(sample_id), val(reads), val(fqs) from fastp_in
 
     output:
-    set val(sample_id), val(read1), file("${sample_id}_${read1}.trimmed.fastq.gz"), val(sample_id), val(read2), file("${sample_id}_${read2}.trimmed.fastq.gz") into fastp_out
+    set val(sample_id), val(r1), file("${sample_id}_${r1}.trimmed.fastq.gz"), val(sample_id), val(r2), file("${sample_id}_${r2}.trimmed.fastq.gz") into fastp_out
     file("${sample_id}.fastp.report.html")
 
-    shell:
+    script:
 
-    fq1 = fq_files[0]
-    fq2 = fq_files[1]
-    read1 = read_nums[0]
-    read2 = read_nums[1]
+    if (fqs[0].contains("_R1")) {
+        fq1 = fqs[0]
+        fq2 = fqs[1]
+        r1  = reads[0]
+        r2  = reads[1]
+    } else {
+        fq1 = fqs[1]
+        fq2 = fqs[0]
+        r1  = reads[1]
+        r2  = reads[0]
+    }
 
-    '''
-    fastp \\
-    --thread !{params.kp_cpus} \\
-    --in1 !{fq1} \\
-    --in2 !{fq2} \\
-    --out1 "!{sample_id}_!{read1}.trimmed.fastq.gz" \\
-    --out2 "!{sample_id}_!{read2}.trimmed.fastq.gz" \\
-    --length_required 25 \\
-    --low_complexity_filter 5 \\
-    --detect_adapter_for_pe \\
-    --html "!{sample_id}.fastp.report.html"
-    '''
+    if (demuxing) {
+
+        """
+        fastp \\
+        --thread ${params.np_cpus} \\
+        --in1 "${fq1}" \\
+        --in2 "${fq2}" \\
+        --out1 "${sample_id}_${r1}.trimmed.fastq.gz" \\
+        --out2 "${sample_id}_${r2}.trimmed.fastq.gz" \\
+        --length_required 25 \\
+        --low_complexity_filter 5 \\
+        --html "${sample_id}.fastp.report.html"
+        """
+
+    } else {
+
+        """
+        fastp \\
+        --thread ${params.np_cpus} \\
+        --in1 ${fq1} \\
+        --in2 ${fq2} \\
+        --out1 "${sample_id}_${r1}.trimmed.fastq.gz" \\
+        --out2 "${sample_id}_${r2}.trimmed.fastq.gz" \\
+        --length_required 25 \\
+        --low_complexity_filter 5 \\
+        --detect_adapter_for_pe \\
+        --html "${sample_id}.fastp.report.html"
+        """
+
+    }
 }
 
 fastp_out
@@ -155,12 +244,12 @@ process runFastqc {
     input:
     set val(sample_id), val(read_num), file(fq_file) from fastqc_in
 
-    //output:
-    //val 'complete' into fastqc_done
+    output:
+    val 'fqc_complete' into fastqc_done
     
     shell:
     '''
-    fastqc !{fq_file} -o !{params.fastqc} -t !{params.kp_cpus} 
+    fastqc !{fq_file} -o !{params.fastqc} -t !{params.np_cpus} 
     '''
 }
 
@@ -186,15 +275,15 @@ process BWA {
     tag { sample_id }
 
     input:
-    set val(sample_id), file(read_nums), file(fq_files) from bwa_in
+    set val(sample_id), file(reads), file(fqs) from bwa_in
 
     output:
     set sample_id, file("${sample_id}.sorted.bam"), file("${sample_id}.sorted.bam.bai") into bwa_out
 
     shell:
 
-    fq1 = fq_files[0]
-    fq2 = fq_files[1]
+    fq1 = fqs[0]
+    fq2 = fqs[1]
 
     '''
     export RG=$(pezzAlign !{fq1})
@@ -212,7 +301,6 @@ process BWA {
     -t $SLURM_CPUS_ON_NODE \\
     --sam2bam -i -
     '''
-
 }
 
 process dedup {
@@ -298,8 +386,8 @@ process BQSR {
     '''
 }
 
-//bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in; haplotyper_in }
-bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in }
+bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in; haplotyper_in }
+//bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in }
 
 process graphBQSR {
     tag { sample_id }
@@ -311,7 +399,7 @@ process graphBQSR {
 
     output:
     file("${sample_id}.bqsr.pdf")
-    //val 'complete' into graph_done
+    val 'graphbqsr_complete' into graph_done
 
     shell:
     '''
@@ -339,7 +427,7 @@ process samStats {
 
     output:
     file("${sample_id}.stats")
-    //val 'complete' into samStats_done
+    val 'ss_complete' into samStats_done
 
     """
     samtools stats ${bam} > "${sample_id}.stats"
@@ -356,7 +444,7 @@ process samFlagstat {
 
     output:
     file("${sample_id}.flagstat")
-    //val 'complete' into samFlagstat_done
+    val 'sfs_complete' into samFlagstat_done
 
     """
     samtools flagstat ${bam} > "${sample_id}.flagstat"
@@ -373,7 +461,7 @@ process coverageMetrics {
 
     output:
     file("${sample_id}.sample_summary")
-    //val 'complete' into coverage_done
+    val 'coverage_complete' into coverage_done
     
     shell:
     '''
@@ -391,7 +479,6 @@ process coverageMetrics {
     '''
 }
 
-/*
 process haplotyper {
     tag { sample_id }
 
@@ -594,13 +681,14 @@ process finalStats {
 
     output:
     file("${params.project}_FinalVCF.stats" )
-    val 'complete' into finalStats
+    val 'bcfstats_complete' into finalStats_done
 
     shell:
     '''
     bcftools stats --threads !{params.np_cpus} !{vcf} > "!{params.project}_FinalVCF.stats"
     '''
 }
+
 process annotateFinalVCF {
     tag { "$params.project" }
 
@@ -614,9 +702,9 @@ process annotateFinalVCF {
 
     shell:
     '''
-    table_annovar.pl \\
+    /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/table_annovar.pl \\
         !{vcf} \\
-        $HOME/modules/annovar/humandb/ \\
+        /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/humandb/ \\
         --buildver hg19 \\
         --out !{params.project}_complete \\
         --remove \\
@@ -627,30 +715,37 @@ process annotateFinalVCF {
     '''
 }
 
+    //.toList()
 fastqc_done
     .unique()
-    .toList()
     .set { allFastqc }
 
+    //.toList()
 samStats_done
     .unique()
-    .toList()
     .set { allSamStats }
 
+    //.toList()
 samFlagstat_done
     .unique()
-    .toList()
-    .set { allFlagStats }
+    .set { allFlagStat }
 
+    //.toList()
 coverage_done
     .unique()
-    .toList()
     .set { allCoverage }
 
+    //.toList()
+finalStats_done
+    .unique()
+    .set { allFinalStats }
+
+    //.toList()
 graph_done
     .unique()
+    .concat(allFastqc, allSamStats, allFlagStat, allCoverage, allFinalStats)
     .toList()
-    .set { allGraph }
+    .set { multiqc_greenlight }
 
 process multiqc {
     tag { "$params.project" }
@@ -658,24 +753,26 @@ process multiqc {
     publishDir "${params.multiqc}", mode: 'copy'
 
     input:
-    val 'complete' from finalStats
-    val 'complete' from allFastqc
-    val 'complete' from allSamStats
-    val 'complete' from allFlagStats
-    val 'complete' from allCoverage
-    val 'complete' from allGraph
+    val greenlights from multiqc_greenlight
+    //val 'complete' from finalStats
+    //val 'complete' from allFastqc
+    //val 'complete' from allSamStats
+    //val 'complete' from allFlagStats
+    //val 'complete' from allCoverage
+    //val 'complete' from allGraph
 
     output:
     file("${params.project}.multiqc.report.html")
+
+    when:
+    greenlights.size() == 6
 
     """
     multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
     """
 }
 
-*/
 workflow.onComplete {
     println "Pipeline completed at: $workflow.complete"
     println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
-
 }

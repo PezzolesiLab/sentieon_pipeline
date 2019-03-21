@@ -1,4 +1,5 @@
 .nextflow*
+work/
 old/
 *.err
 *.out
@@ -6,5 +7,6 @@ test*/
 practice*/
 real*/
 filtering/
+nextflow.config
 .DS*
 ._.DS*
