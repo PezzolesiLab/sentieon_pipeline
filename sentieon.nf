@@ -3,7 +3,7 @@
 log.info """\
     ==================================
               Pezzolesi Lab           
-               Sentieon PL            
+            Sentieon Pipeline            
     ==================================
     
     -- With the following VQSR knowns --
@@ -24,7 +24,8 @@ log.info """\
        Wuxi: $params.bedFile
 
     -- Software dependencies --
-       annovar (currently pointing to my copy)
+       NOTE: Not sure if this will work, but these are all executables in your ./bin
+       annovar
        fastp/0.19.6
        multiqc/1.7
        cutadapt/1.6 or higher
@@ -203,7 +204,7 @@ process runfastp {
 
         """
         fastp \\
-        --thread ${params.np_cpus} \\
+        --thread ${params.kp_cpus} \\
         --in1 "${fq1}" \\
         --in2 "${fq2}" \\
         --out1 "${sample_id}_${r1}.trimmed.fastq.gz" \\
@@ -217,7 +218,7 @@ process runfastp {
 
         """
         fastp \\
-        --thread ${params.np_cpus} \\
+        --thread ${params.kp_cpus} \\
         --in1 ${fq1} \\
         --in2 ${fq2} \\
         --out1 "${sample_id}_${r1}.trimmed.fastq.gz" \\
@@ -249,7 +250,7 @@ process runFastqc {
     
     shell:
     '''
-    fastqc !{fq_file} -o !{params.fastqc} -t !{params.np_cpus} 
+    fastqc !{fq_file} -o !{params.fastqc} -t !{params.kp_cpus} 
     '''
 }
 
@@ -702,7 +703,7 @@ process annotateFinalVCF {
 
     shell:
     '''
-    /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/table_annovar.pl \\
+    table_annovar.pl \\
         !{vcf} \\
         /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/humandb/ \\
         --buildver hg19 \\
@@ -715,32 +716,26 @@ process annotateFinalVCF {
     '''
 }
 
-    //.toList()
 fastqc_done
     .unique()
     .set { allFastqc }
 
-    //.toList()
 samStats_done
     .unique()
     .set { allSamStats }
 
-    //.toList()
 samFlagstat_done
     .unique()
     .set { allFlagStat }
 
-    //.toList()
 coverage_done
     .unique()
     .set { allCoverage }
 
-    //.toList()
 finalStats_done
     .unique()
     .set { allFinalStats }
 
-    //.toList()
 graph_done
     .unique()
     .concat(allFastqc, allSamStats, allFlagStat, allCoverage, allFinalStats)
@@ -754,12 +749,6 @@ process multiqc {
 
     input:
     val greenlights from multiqc_greenlight
-    //val 'complete' from finalStats
-    //val 'complete' from allFastqc
-    //val 'complete' from allSamStats
-    //val 'complete' from allFlagStats
-    //val 'complete' from allCoverage
-    //val 'complete' from allGraph
 
     output:
     file("${params.project}.multiqc.report.html")
