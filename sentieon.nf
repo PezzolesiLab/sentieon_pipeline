@@ -24,6 +24,7 @@ log.info """\
        Wuxi: $params.bedFile
 
     -- Software dependencies --
+       March 21 2019: Not sure if including these executables in the ./bin will work
        annovar (currently pointing to my copy)
        fastp/0.19.6
        multiqc/1.7
@@ -705,7 +706,7 @@ process annotateFinalVCF {
 
     shell:
     '''
-    /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/table_annovar.pl \\
+    table_annovar.pl \\
         !{vcf} \\
         /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/humandb/ \\
         --buildver hg19 \\
