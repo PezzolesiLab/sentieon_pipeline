@@ -10,22 +10,27 @@
 #SBATCH --partition=pezzolesi-np
 ##SBATCH --partition=ember
 
+# this vvvv should be either 'resume' or 'new'
 resume=$1
-scratchDir=$scr/missingBams
-#SLURM_CLUSTERS="kingspeak"
-#export SLURM_CLUSTERS
+# rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
+scratchDir=$scr/practiceUKS
+# rename this vvvv to change clusters (e.g. kingspeak, notchpeak, ember, lonepeak, etc.)
+SLURM_CLUSTERS="ember"
+export SLURM_CLUSTERS
 
 if [[ $resume == "resume" ]]; then
     if [ -d $scratchDir ]; then
+        echo -e "\nResuming your previous run\n"
+        cp ./sentieon.nf ./nextflow.config $scratchDir
+        cp ./bin/pezzAlign $scratchDir/bin
         cd $scratchDir
-        echo "RESUMING"
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf -resume
     else
         echo "There's nothing to resume (scratch directory doesn't exist)"
     fi
 elif [[ $resume == "new" ]]; then
     if [ ! -d $scratchDir ]; then
-        echo "STARTING FRESH"
+        echo -e "\nStarting a new project\n"
         mkdir -p $scratchDir/{results/{fastp,fastqc,bqsr,bam/{stats,coverage},gvcf,vcf/stats},bin}
         cp ./sentieon.nf ./nextflow.config $scratchDir
         cp ./bin/pezzAlign $scratchDir/bin
