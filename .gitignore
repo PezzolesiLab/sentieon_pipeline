@@ -1,12 +1,12 @@
 .nextflow*
+work/
 old/
-realData/
 *.err
 *.out
 test*/
-practiceData/
-practiceDemuxData/
-work/
+practice*/
+real*/
 filtering/
+nextflow.config
 .DS*
 ._.DS*
