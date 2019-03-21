@@ -173,7 +173,7 @@ if ( demuxing ) {
   
 }
 
-process runfastp {
+process runFastp {
     tag { sample_id }
 
     publishDir "${params.fastp}", mode: 'copy', pattern: '*.html'
