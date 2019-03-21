@@ -5,6 +5,8 @@ realData/
 *.out
 test*/
 practiceData/
+practiceDemuxData/
+work/
 filtering/
 .DS*
 ._.DS*
