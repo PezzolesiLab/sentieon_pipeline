@@ -3,7 +3,7 @@
 log.info """\
     ==================================
               Pezzolesi Lab           
-               Sentieon PL            
+            Sentieon Pipeline            
     ==================================
     
     -- With the following VQSR knowns --
@@ -719,32 +719,26 @@ process annotateFinalVCF {
     '''
 }
 
-    //.toList()
 fastqc_done
     .unique()
     .set { allFastqc }
 
-    //.toList()
 samStats_done
     .unique()
     .set { allSamStats }
 
-    //.toList()
 samFlagstat_done
     .unique()
     .set { allFlagStat }
 
-    //.toList()
 coverage_done
     .unique()
     .set { allCoverage }
 
-    //.toList()
 finalStats_done
     .unique()
     .set { allFinalStats }
 
-    //.toList()
 graph_done
     .unique()
     .concat(allFastqc, allSamStats, allFlagStat, allCoverage, allFinalStats)
@@ -758,12 +752,6 @@ process multiqc {
 
     input:
     val greenlights from multiqc_greenlight
-    //val 'complete' from finalStats
-    //val 'complete' from allFastqc
-    //val 'complete' from allSamStats
-    //val 'complete' from allFlagStats
-    //val 'complete' from allCoverage
-    //val 'complete' from allGraph
 
     output:
     file("${params.project}.multiqc.report.html")
