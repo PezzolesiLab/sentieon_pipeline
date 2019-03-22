@@ -1,8 +1,14 @@
 # How to Run the Pipeline
 
+TODO: destinationDir need to agree in both runSentieonPL.sh and config
+TODO: setting scratch to the same scratch directory
+
+All of the fastq files that you want to push through the pipeline need to be in the same directory. If the fastqs are in different
+directories you can create symbolic links that are all in the same directory for the fastqs of interest.
+
 You need a config file to run the pipeline. You can create a new one if you'd like, or you can use one of the ones provided in the `./configs` directory. The config file you end up using must be named `nextflow.config` and must be in the same directory as the `sentieon.nf` file. You'll need to rename and move one of these files in order to run the pipeline. You should execute a command similar to this:
 
-`cp ./bin/demux.config ./nextflow.config`
+`cp ./configs/demux.config ./nextflow.config`
 
 This `nextflow.config` file and the `runSentieonPL.sh` script should be the only two files you have to edit.
 

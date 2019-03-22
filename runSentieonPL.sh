@@ -22,7 +22,7 @@ if [[ $resume == "resume" ]]; then
     if [ -d $scratchDir ]; then
         echo -e "\nResuming your previous run\n"
         cp ./sentieon.nf ./nextflow.config $scratchDir
-        cp ./bin/pezzAlign $scratchDir/bin
+        cp -r ./bin $scratchDir
         cd $scratchDir
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf -resume
     else
@@ -33,7 +33,7 @@ elif [[ $resume == "new" ]]; then
         echo -e "\nStarting a new project\n"
         mkdir -p $scratchDir/{results/{fastp,fastqc,bqsr,bam/{stats,coverage},gvcf,vcf/stats},bin}
         cp ./sentieon.nf ./nextflow.config $scratchDir
-        cp ./bin/pezzAlign $scratchDir/bin
+        cp -r ./bin $scratchDir
         cd $scratchDir
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf
     else
