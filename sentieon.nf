@@ -96,7 +96,6 @@ if ( demuxing ) {
     //.filter { it[0] =~ /bc[0][1-2]/ }
     demux_out
       .transpose()
-      .subscribe { println it.toString() }
       .filter { ( it.toString() =~ /15686\w*\.(bc[0-3][0-9]|bc4[0-8])|15887\w*\.(bc49|bc[5-9][0-9]|bc9[0-6])/ ) }
       .set{ trim_in }
 
