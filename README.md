@@ -8,7 +8,7 @@ directories you can create symbolic links that are all in the same directory for
 
 You need a config file to run the pipeline. You can create a new one if you'd like, or you can use one of the ones provided in the `./configs` directory. The config file you end up using must be named `nextflow.config` and must be in the same directory as the `sentieon.nf` file. You'll need to rename and move one of these files in order to run the pipeline. You should execute a command similar to this:
 
-`cp ./configs/demux.config ./nextflow.config`
+`cp ./bin/demux.config ./nextflow.config`
 
 This `nextflow.config` file and the `runSentieonPL.sh` script should be the only two files you have to edit.
 
