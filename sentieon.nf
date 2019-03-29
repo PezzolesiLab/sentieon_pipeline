@@ -96,7 +96,7 @@ if ( demuxing ) {
     //.filter { it[0] =~ /bc[0][1-2]/ }
     demux_out
       .transpose()
-      .filter { ( it.toString() =~ /15686\w*\.(bc[0-3][0-9]|bc4[0-8])|15887\w*\.(bc49|bc[5-9][0-9]|bc9[0-6])/ ) }
+      .filter { ( it.toString() =~ /15686\w*\.(bc[0-3][0-9]|bc4[0-8])|15887\w*\.(bc49|bc[5-9][0-9]|bc9[0-6])|15942X1\w*\.(bc[0-3][0-9]|bc4[0-8])|15942X2\w*\.(bc49|bc[5-9][0-9]|bc9[0-6])/ ) }
       .set{ trim_in }
 
     process trimReads {
@@ -319,7 +319,8 @@ process BWA {
 
 process dedup {
     tag { sample_id }
-
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
+    
     input:
     set sample_id, file(bam), file(index) from bwa_out
 
@@ -328,6 +329,7 @@ process dedup {
 
     shell:
     '''
+    module load sentieon/201711.05
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
     -i !{bam} \\
@@ -346,6 +348,7 @@ process dedup {
 
 process indelRealigner {
     tag { sample_id }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     input:
     set sample_id, file(deduped), file(index) from dedup_out
@@ -355,6 +358,7 @@ process indelRealigner {
 
     shell:
     '''
+    module load sentieon/201711.05
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
     -r !{params.reference} \\
@@ -368,6 +372,7 @@ process indelRealigner {
 
 process BQSR {
     tag { sample_id }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     publishDir "${params.bam}", mode: 'copy', pattern: '*.{bam,bai}'
 
@@ -380,6 +385,7 @@ process BQSR {
 
     shell:
     '''
+    module load sentieon/201711.05
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
     -r !{params.reference} \\
@@ -405,6 +411,7 @@ bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in; haplotyper_in }
 
 process graphBQSR {
     tag { sample_id }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     publishDir "${params.bqsr}", mode: 'copy'
 
@@ -417,6 +424,7 @@ process graphBQSR {
 
     shell:
     '''
+    module load sentieon/201711.05
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
     --algo QualCal \\
@@ -467,6 +475,7 @@ process samFlagstat {
 
 process coverageMetrics {
     tag { sample_id }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     publishDir "${params.coverage}", mode: 'copy'
 
@@ -479,6 +488,7 @@ process coverageMetrics {
     
     shell:
     '''
+    module load sentieon/201711.05
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
     -i !{bam} \\
@@ -495,6 +505,7 @@ process coverageMetrics {
 
 process haplotyper {
     tag { sample_id }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     publishDir "${params.gvcf}", mode: 'copy'
 
@@ -506,6 +517,7 @@ process haplotyper {
 
     shell:
     '''
+    module load sentieon/201711.05
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
     -r !{params.reference} \\
@@ -529,6 +541,7 @@ haplotyper_out
 
 process gvcfTyper {
     tag { "$params.project" }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     input:
     val gvcfs from gvcfTyper_in
@@ -541,6 +554,7 @@ process gvcfTyper {
     inputGVCFs = gvcfs.join(' -v ')
 
     '''
+    module load sentieon/201711.05
     sentieon driver \\
     -t $SLURM_CPUS_ON_NODE \\
     -r !{params.reference} \\
@@ -577,6 +591,7 @@ process mergeGVCFs {
 
 process varCalSnp {
     tag { "$params.project" }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     input:
     set file(merged_vcf), file(index) from mergeGVCFs_out
@@ -585,6 +600,7 @@ process varCalSnp {
     set file(merged_vcf), file(index), file("${params.project}_recal.tranches.snp"), file("${params.project}_recal.snp.vcf.gz"), file("${params.project}_recal.snp.vcf.gz.tbi") into varCalSNP_out
 
     """
+    module load sentieon/201711.05
     sentieon driver \\
     --thread_count $params.np_cpus \\
     -r $params.reference \\
@@ -609,6 +625,7 @@ process varCalSnp {
 
 process applyVarCalSnp {
     tag {"$params.project" }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     input:
     set file(merged_vcf), file(merged_index), file(snpTranchFile), file(recalVCF), file(index) from varCalSNP_out
@@ -617,6 +634,7 @@ process applyVarCalSnp {
     set file("${params.project}_applyRecal.snp.vcf.gz"), file("${params.project}_applyRecal.snp.vcf.gz.tbi") into appliedSNP_out
 
     """
+    module load sentieon/201711.05
     sentieon driver \\
     --thread_count $params.np_cpus \\
     -r $params.reference \\
@@ -632,6 +650,7 @@ process applyVarCalSnp {
 
 process varCalIndel {
     tag { "$params.project" }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     input:
     set file(snp_recal_file), file(index) from appliedSNP_out
@@ -640,6 +659,7 @@ process varCalIndel {
     set file(snp_recal_file), file(index), file("${params.project}_recal.tranches.indel"), file("${params.project}_recal.indel.vcf.gz"), file("${params.project}_recal.indel.vcf.gz.tbi") into varCalIndel_out
 
     """
+    module load sentieon/201711.05
     sentieon driver \\
     --thread_count $params.np_cpus \\
     -r $params.reference \\
@@ -661,6 +681,7 @@ process varCalIndel {
 
 process applyVarCalIndel {
     tag { "$params.project" }
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     publishDir "${params.vcf}", mode: 'copy'
 
@@ -671,6 +692,7 @@ process applyVarCalIndel {
     set file("${params.project}_complete.vcf.gz"), file("${params.project}_complete.vcf.gz.tbi") into appliedIndel_out
 
     """
+    module load sentieon/201711.05
     sentieon driver \\
     --thread_count $params.np_cpus \\
     -r $params.reference \\
