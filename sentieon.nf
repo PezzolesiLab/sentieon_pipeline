@@ -106,7 +106,7 @@ if ( demuxing ) {
       set val(library_read_lane1), file(fq_file1), val(library_read_lane2), file(fq_file2) from trim_in
 
       output:
-      set val("${library1}_${r1}_${lane1}_${barcode1}"), file("${library}_${r1}_${lane}_${barcode1}.nobc.fastq.gz"), val(r1), file("${library2}_${r2}_${lane2}_${barcode2}.nobc.fastq.gz"), val(r2) into trim_out
+      set val("${library1}_${r1}_${lane1}_${barcode1}"), file("${library1}_${r1}_${lane1}_${barcode1}.nobc.fastq.gz"), val(r1), file("${library2}_${r2}_${lane2}_${barcode2}.nobc.fastq.gz"), val(r2) into trim_out
 
       shell:
 
@@ -139,7 +139,7 @@ if ( demuxing ) {
       .fromPath( "${params.sampleKey}" )
       .splitCsv(header: true)
       .map { row -> tuple(row.Library + "_" + row.Read + "_L" + row.Lane + "_" + row.Barcode_ID, row.Sample_ID) }
-      .filter { ( it.toString() =~ /15686\w*\.(bc[0-3][0-9]|bc4[0-8])|15887\w*\.(bc49|bc[5-9][0-9]|bc9[0-6])/ ) }
+      //.filter { ( it.toString() =~ /15686\w*_(bc[0-3][0-9]|bc4[0-8])|15887\w*_(bc49|bc[5-9][0-9]|bc9[0-6])/ ) }
       //.filter { (it[1] =~ /bc[0-3][0-9]|bc4[0-8]/ & it[1] =~ /15686/) | (it[1] =~ /bc49|bc[5-8][0-9]|bc9[0-6]/ & it[1] =~ /15887/ ) }
 
     trim_out.join(sampleNamesBarcodeKey).flatten().buffer(size:5, skip:1).set{ rename_in }
@@ -272,6 +272,8 @@ process unzipFastqs {
 
     """
     gunzip -c ${fq_file} > ${sample_id}_${read_num}.fastq
+    sync
+    sleep 5
     """
 }
 
@@ -281,6 +283,7 @@ gunzip_fq_out
     
 process BWA {
     tag { sample_id }
+    echo true 
 
     input:
     set val(sample_id), file(reads), file(fqs) from bwa_in
@@ -295,6 +298,7 @@ process BWA {
 
     '''
     export RG=$(pezzAlign !{fq1})
+    echo $MODULEPATH
 
     ( bwa mem -M \\
     -R $RG \\
@@ -710,7 +714,7 @@ process annotateFinalVCF {
 
     shell:
     '''
-    table_annovar.pl \\
+    /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/table_annovar.pl \\
         !{vcf} \\
         /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/humandb/ \\
         --buildver hg19 \\

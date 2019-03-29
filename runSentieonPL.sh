@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH -o pipelineKickOff-%j.out
 #SBATCH -e pipelineKickOff-%j.err
-#SBATCH --mail-user=scott.frodsham@hsc.utah.edu
+#SBATCH --mail-user=julio.fierro@hsc.utah.edu,scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
 #SBATCH --account=pezzolesi-np
 #SBATCH --partition=pezzolesi-np
