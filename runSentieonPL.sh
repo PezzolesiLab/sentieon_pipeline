@@ -7,16 +7,18 @@
 #SBATCH --mail-user=julio.fierro@hsc.utah.edu,scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
 #SBATCH --account=pezzolesi-np
-#SBATCH --partition=pezzolesi-np
+#SBATCH --partition=pezzolesi-shared-np
 ##SBATCH --partition=ember
+#SBATCH --ntasks=6
+#SBATCH --mem=32G
 
 # this vvvv should be either 'resume' or 'new'
 resume=$1
 # rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
-scratchDir=$scr/run-nf
+scratchDir=$scr/run-node-nf
 # rename this vvvv to change clusters (e.g. kingspeak, notchpeak, ember, lonepeak, etc.)
-SLURM_CLUSTERS="ember"
-export SLURM_CLUSTERS
+#SLURM_CLUSTERS="notchpeak"
+#export SLURM_CLUSTERS
 
 if [[ $resume == "resume" ]]; then
     if [ -d $scratchDir ]; then

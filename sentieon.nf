@@ -126,7 +126,7 @@ if ( demuxing ) {
       cutadapt \\
       -u 6 \\
       -U 6 \\
-      -j $SLURM_CPUS_ON_NODE \\
+      -j !{params.cpus_left} \\
       -o "!{library1}_!{r1}_!{lane1}_!{barcode1}.nobc.fastq.gz" \\
       -p "!{library2}_!{r2}_!{lane2}_!{barcode2}.nobc.fastq.gz" \\
       !{fq_file1} \\
@@ -211,7 +211,7 @@ process runFastp {
 
         """
         fastp \\
-        --thread "${params.em_cpus}" \\
+        --thread "${params.single_cpus}" \\
         --in1 "${fq1}" \\
         --in2 "${fq2}" \\
         --out1 "${sample_id}_${r1}.trimmed.fastq.gz" \\
@@ -225,7 +225,7 @@ process runFastp {
 
         """
         fastp \\
-        --thread "${params.em_cpus}" \\
+        --thread "${params.single_cpus}" \\
         --in1 ${fq1} \\
         --in2 ${fq2} \\
         --out1 "${sample_id}_${r1}.trimmed.fastq.gz" \\
@@ -257,7 +257,7 @@ process runFastqc {
     
     shell:
     '''
-    fastqc !{fq_file} -o !{params.fastqc} -t $SLURM_CPUS_ON_NODE 
+    fastqc !{fq_file} -o !{params.fastqc} -t !{params.cpus_left} 
     '''
 }
 
@@ -305,14 +305,14 @@ process BWA {
     ( bwa mem -M \\
     -R $RG \\
     -K 10000000 \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     !{params.reference} \\
     !{fq1} \\
     !{fq2} \\
     || echo -n 'error' ) \\
     | sentieon util sort \\
     -o "!{sample_id}.sorted.bam" \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     --sam2bam -i -
     '''
 }
@@ -331,13 +331,13 @@ process dedup {
     '''
     module load sentieon/201711.05
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     -i !{bam} \\
     --algo LocusCollector \\
     --fun score_info "!{sample_id}.score.txt" \\
 
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     -i !{bam} \\
     --algo Dedup \\
     --score_info "!{sample_id}.score.txt" \\
@@ -360,7 +360,7 @@ process indelRealigner {
     '''
     module load sentieon/201711.05
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     -r !{params.reference} \\
     -i !{deduped} \\
     --algo Realigner \\
@@ -387,7 +387,7 @@ process BQSR {
     '''
     module load sentieon/201711.05
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     -r !{params.reference} \\
     -i !{realigned} \\
     --algo QualCal \\
@@ -395,7 +395,7 @@ process BQSR {
     "!{realigned.baseName}.recal_data_table"
 
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     -r !{params.reference} \\
     -i !{realigned} \\
     -q "!{realigned.baseName}.recal_data_table" \\
@@ -426,7 +426,7 @@ process graphBQSR {
     '''
     module load sentieon/201711.05
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     --algo QualCal \\
     --plot \\
     --before !{table} \\
@@ -443,6 +443,7 @@ process samStats {
     tag { sample_id }
 
     publishDir "${params.stats}", mode: 'copy'
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     input:
     set sample_id, file(bam), file(index), file(recal_table) from stats_in
@@ -452,6 +453,7 @@ process samStats {
     val 'ss_complete' into samStats_done
 
     """
+    module load samtools/1.7
     samtools stats ${bam} > "${sample_id}.stats"
     """
 }
@@ -460,6 +462,7 @@ process samFlagstat {
     tag { sample_id }
 
     publishDir "${params.stats}", mode: 'copy'
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     input:
     set sample_id, file(bam), file(index), file(recal_table) from flagstat_in
@@ -469,6 +472,7 @@ process samFlagstat {
     val 'sfs_complete' into samFlagstat_done
 
     """
+    module load samtools/1.7
     samtools flagstat ${bam} > "${sample_id}.flagstat"
     """
 }
@@ -490,9 +494,9 @@ process coverageMetrics {
     '''
     module load sentieon/201711.05
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     -i !{bam} \\
-    --interval !{params.bedFile} \\
+    --interval !{params.targetedBedFile} \\
     -r !{params.reference} \\
     --algo CoverageMetrics \\
     --partition sample \\
@@ -519,7 +523,7 @@ process haplotyper {
     '''
     module load sentieon/201711.05
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     -r !{params.reference} \\
     -i !{recalbam} \\
     -q !{recalTable} \\
@@ -556,9 +560,9 @@ process gvcfTyper {
     '''
     module load sentieon/201711.05
     sentieon driver \\
-    -t $SLURM_CPUS_ON_NODE \\
+    -t !{params.cpus_left} \\
     -r !{params.reference} \\
-    --interval !{params.bedFile} \\
+    --interval !{params.tiledBedFile} \\
     --algo GVCFtyper \\
     "!{params.project}.g.vcf.gz" \\
     -v !{inputGVCFs}
@@ -572,7 +576,8 @@ gvcfTyper_out
 
 process mergeGVCFs {
     tag { "$params.project" }
-
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
+    
     input:
     val chrFiles from mergeGVCFs_in
 
@@ -584,7 +589,8 @@ process mergeGVCFs {
     inputVCFs = chrFiles.join(' ')
 
     '''
-    bcftools concat --thread !{params.np_cpus} -O z !{inputVCFs} -o "!{params.project}_merged.vcf.gz"
+    module load bcftools/1.7
+    bcftools concat --thread !{params.cpus_left} -O z !{inputVCFs} -o "!{params.project}_merged.vcf.gz"
     tabix -p vcf "!{params.project}_merged.vcf.gz"
     '''
 }
@@ -602,7 +608,7 @@ process varCalSnp {
     """
     module load sentieon/201711.05
     sentieon driver \\
-    --thread_count $params.np_cpus \\
+    --thread_count $params.cpus_left \\
     -r $params.reference \\
     --algo VarCal \\
     --vcf $merged_vcf \\
@@ -636,7 +642,7 @@ process applyVarCalSnp {
     """
     module load sentieon/201711.05
     sentieon driver \\
-    --thread_count $params.np_cpus \\
+    --thread_count $params.cpus_left \\
     -r $params.reference \\
     --algo ApplyVarCal \\
     --vcf $merged_vcf \\
@@ -661,7 +667,7 @@ process varCalIndel {
     """
     module load sentieon/201711.05
     sentieon driver \\
-    --thread_count $params.np_cpus \\
+    --thread_count $params.cpus_left \\
     -r $params.reference \\
     --algo VarCal \\
     --vcf $snp_recal_file \\
@@ -694,7 +700,7 @@ process applyVarCalIndel {
     """
     module load sentieon/201711.05
     sentieon driver \\
-    --thread_count $params.np_cpus \\
+    --thread_count $params.cpus_left \\
     -r $params.reference \\
     --algo ApplyVarCal \\
     --vcf $snp_recal_file \\
@@ -711,6 +717,7 @@ process finalStats {
     tag { "${params.project}" }
 
     publishDir "${params.vcfstats}", mode: 'copy'
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     input:
     set file(vcf), file(index) from vcfStats_in
@@ -721,7 +728,8 @@ process finalStats {
 
     shell:
     '''
-    bcftools stats --threads !{params.np_cpus} !{vcf} > "!{params.project}_FinalVCF.stats"
+    module load bcftools/1.7
+    bcftools stats --threads !{params.cpus_left} !{vcf} > "!{params.project}_FinalVCF.stats"
     '''
 }
 
