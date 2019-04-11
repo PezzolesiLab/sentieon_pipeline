@@ -285,6 +285,7 @@ process BWA {
     tag { sample_id }
     echo true 
     beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
+    cache 'deep'
 
     input:
     set val(sample_id), file(reads), file(fqs) from bwa_in
@@ -590,6 +591,7 @@ process mergeGVCFs {
 
     '''
     module load bcftools/1.7
+    module load tabix/1.7
     bcftools concat --thread !{params.cpus_left} -O z !{inputVCFs} -o "!{params.project}_merged.vcf.gz"
     tabix -p vcf "!{params.project}_merged.vcf.gz"
     '''
