@@ -287,6 +287,8 @@ process BWA {
     beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
     cache 'deep'
 
+    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
+
     input:
     set val(sample_id), file(reads), file(fqs) from bwa_in
 
@@ -299,6 +301,8 @@ process BWA {
     fq2 = fqs[1]
 
     '''
+    module load sentieon/201711.05
+
     export RG=$(pezzAlign !{fq1})
     echo $MODULEPATH
     module load sentieon/201711.05
