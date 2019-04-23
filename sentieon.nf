@@ -1,5 +1,7 @@
 #!/usr/bin/nextflow
 
+       //1G indels: $params.indel_1G 
+       //1G indels: $params.indel_1G_par 
 log.info """\
     ==================================
               Pezzolesi Lab           
@@ -11,13 +13,11 @@ log.info """\
        dbsnp: $params.dbsnp 
        hapmap: $params.hapmap
        1G snps: $params.snp_1G
-       1G indels: $params.indel_1G 
        mills indels: $params.indel_mills
 
     -- Set to the following parameters --
        hapmap: $params.hapmap_par 
        1G snps: $params.snp_1G_par 
-       1G indels: $params.indel_1G_par 
        mills indels: $params.indel_mills_par
 
     -- Using the following region bed files --
@@ -361,6 +361,7 @@ process indelRealigner {
     output:
     set sample_id, file("${deduped.baseName}.realigned.bam"), file("${deduped.baseName}.realigned.bam.bai") into realign_out
 
+    //-k !{params.indel_1G} \\
     shell:
     '''
     module load sentieon/201711.05
@@ -369,7 +370,6 @@ process indelRealigner {
     -r !{params.reference} \\
     -i !{deduped} \\
     --algo Realigner \\
-    -k !{params.indel_1G} \\
     -k !{params.indel_mills} \\
     "!{deduped.baseName}.realigned.bam"
     '''
@@ -552,11 +552,13 @@ process gvcfTyper {
     tag { "$params.project" }
     beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
+    publishDir "${params.vcf}", mode: 'copy'
+
     input:
     val gvcfs from gvcfTyper_in
 
     output:
-    file ("${params.project}.g.vcf.gz") into gvcfTyper_out
+    file ("${params.project}.vcf.gz") into gvcfTyper_out
 
     shell:
 
@@ -569,7 +571,7 @@ process gvcfTyper {
     -r !{params.reference} \\
     --interval !{params.tiledBedFile} \\
     --algo GVCFtyper \\
-    "!{params.project}.g.vcf.gz" \\
+    "!{params.project}.vcf.gz" \\
     -v !{inputGVCFs}
     '''
 }
@@ -583,6 +585,8 @@ process mergeGVCFs {
     tag { "$params.project" }
     beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
     
+    publishDir "${params.vcf}", mode: 'copy'
+
     input:
     val chrFiles from mergeGVCFs_in
 
@@ -670,6 +674,8 @@ process varCalIndel {
     output:
     set file(snp_recal_file), file(index), file("${params.project}_recal.tranches.indel"), file("${params.project}_recal.indel.vcf.gz"), file("${params.project}_recal.indel.vcf.gz.tbi") into varCalIndel_out
 
+    //--resource $params.indel_1G \\
+    //--resource_param $params.indel_1G_par \\
     """
     module load sentieon/201711.05
     sentieon driver \\
@@ -681,8 +687,6 @@ process varCalIndel {
     --tranches_file "${params.project}_recal.tranches.indel" \\
     --resource $params.indel_mills \\
     --resource_param $params.indel_mills_par \\
-    --resource $params.indel_1G \\
-    --resource_param $params.indel_1G_par \\
     --annotation DP \\
     --annotation MQRankSum \\
     --annotation ReadPosRankSum \\
@@ -695,7 +699,7 @@ process applyVarCalIndel {
     tag { "$params.project" }
     beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
-    publishDir "${params.vcf}", mode: 'copy'
+    //publishDir "${params.vcf}", mode: 'copy'
 
     input:
     set file(snp_recal_file), file(recal_index), file(IndelTranch), file(recalVCF), file(index) from varCalIndel_out
@@ -758,8 +762,8 @@ process annotateFinalVCF {
         --buildver hg19 \\
         --out !{params.project}_complete \\
         --remove \\
-        --protocol refGene,ensGene,knownGene,dbnsfp30a,gnomad_genome,exac03 \\
-        --operation g,g,g,f,f,f \\
+        --protocol refGene,ensGene,knownGene,dbnsfp30a,gnomad_genome,exac03,revel \\
+        --operation g,g,g,f,f,f,g \\
         --nastring . \\
         --vcfinput
     '''
