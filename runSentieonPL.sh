@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-#SBATCH --time=5-00:00:00
+#SBATCH --time=0-02:00:00
 #SBATCH --nodes=1
 #SBATCH -o pipelineKickOff-%j.out
 #SBATCH -e pipelineKickOff-%j.err
 #SBATCH --mail-user=julio.fierro@hsc.utah.edu,scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
-#SBATCH --account=pezzolesi-np
-#SBATCH --partition=pezzolesi-shared-np
+#SBATCH --account=notchpeak-shared
+#SBATCH --partition=notchpeak-shared
 ##SBATCH --partition=ember
 #SBATCH --ntasks=6
 #SBATCH --mem=32G

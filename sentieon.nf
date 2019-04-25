@@ -21,7 +21,8 @@ log.info """\
        mills indels: $params.indel_mills_par
 
     -- Using the following region bed files --
-       Wuxi: $params.bedFile
+       Affy: $params.targetedBedFile
+       Affy: $params.tiledBedFile
 
     -- Software dependencies --
        March 21 2019: Not sure if including these executables in the ./bin will work
