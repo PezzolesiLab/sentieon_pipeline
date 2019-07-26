@@ -4,7 +4,7 @@ old/
 *.err
 *.out
 test*/
-practice*/
+*practice*/
 real*/
 filtering/
 nextflow.config
