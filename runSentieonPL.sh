@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
+<<<<<<< Updated upstream
 #SBATCH --time=0-02:00:00
+=======
+#SBATCH --time=1-00:00:00
+>>>>>>> Stashed changes
 #SBATCH --nodes=1
 #SBATCH -o pipelineKickOff-%j.out
 #SBATCH -e pipelineKickOff-%j.err
