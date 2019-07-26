@@ -1,7 +1,5 @@
 #!/usr/bin/nextflow
 
-       //1G indels: $params.indel_1G 
-       //1G indels: $params.indel_1G_par 
 log.info """\
     ==================================
               Pezzolesi Lab           
@@ -43,9 +41,8 @@ log.info """\
 """
 
 demuxing = params.isDemuxNeeded
-// feature isn't added will need to add if we ever push data through that doesn't need an interval file (WGS data)
 interval = params.isIntervalNeeded
-twoFqs = params.twoFastqsExist
+twoFqs = params.inputTwoFastqs
 
 if ( twoFqs ) {
     if ( demuxing ) {
@@ -327,14 +324,10 @@ if ( twoFqs ) {
         .fromPath( "${params.dataDir}" )
         .map { file ->
             fName = file.baseName
-            id = fName.tokenize('.')[0].tokenize('_')[1]
+            id = fName.tokenize('.')[0].tokenize('_')[0]
             [ id, file ]
         }
     
-    idReadFq
-        .groupTuple()
-        .set { fastp_in }
-
     process runFastp {
         tag { sample_id }
 
@@ -344,7 +337,7 @@ if ( twoFqs ) {
         set val(sample_id), val(fq) from fastp_in
 
         output:
-        set val(sample_id), file("${sample_id}_${r1}.trimmed.fastq.gz"), val(sample_id), file("${sample_id}_${r2}.trimmed.fastq.gz") into fastp_out
+        set val(sample_id), file("${sample_id}.trimmed.fastq.gz") into fastp_out
         file("${sample_id}.fastp.report.html")
 
         script:
@@ -352,8 +345,8 @@ if ( twoFqs ) {
         """
         fastp \\
         --thread "${params.single_cpus}" \\
-        --in1 ${fq1} \\
-        --out1 "${sample_id}_${r1}.trimmed.fastq.gz" \\
+        --in ${fq} \\
+        --out "${sample_id}.trimmed.fastq.gz" \\
         --length_required 25 \\
         --low_complexity_filter 5 \\
         --detect_adapter_for_pe \\
@@ -361,12 +354,7 @@ if ( twoFqs ) {
         """
     }
 
-    fastp_out
-        .flatten()
-        .collate( 2 )
-        .set { collated }
-
-    collated.into { fastqc_in; gunzip_fq_in }
+    fastp_out.into { fastqc_in; gunzip_fq_in }
 
     process runFastqc {
         tag { sample_id }
@@ -399,10 +387,6 @@ if ( twoFqs ) {
         """
     }
 
-    //gunzip_fq_out
-    //    .groupTuple()
-    //    .set { bwa_in }
-        
     process BWA {
         tag { sample_id }
         echo true 
@@ -410,7 +394,7 @@ if ( twoFqs ) {
         cache 'deep'
 
         input:
-        set val(sample_id), file(reed), file(fq) from bwa_in
+        set val(sample_id), file(fq) from bwa_in
 
         output:
         set sample_id, file("${sample_id}.sorted.bam"), file("${sample_id}.sorted.bam.bai") into bwa_out
@@ -478,7 +462,6 @@ process indelRealigner {
     output:
     set sample_id, file("${deduped.baseName}.realigned.bam"), file("${deduped.baseName}.realigned.bam.bai") into realign_out
 
-    //-k !{params.indel_1G} \\
     shell:
     '''
     module load sentieon/201711.05
@@ -529,7 +512,6 @@ process BQSR {
 }
 
 bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in; haplotyper_in }
-//bqsr_out.into { stats_in; flagstat_in; coverageMetrics_in }
 
 process graphBQSR {
     tag { sample_id }
@@ -708,6 +690,7 @@ process gvcfTyper {
         "!{params.project}.g.vcf.gz" \\
         -v !{inputGVCFs}
         '''
+
     } else {
         shell:
 
@@ -722,9 +705,7 @@ process gvcfTyper {
         "!{params.project}.g.vcf.gz" \\
         -v !{inputGVCFs}
         '''
-
     }
-    
 }
 
 gvcfTyper_out
@@ -825,8 +806,6 @@ process varCalIndel {
     output:
     set file(snp_recal_file), file(index), file("${params.project}_recal.tranches.indel"), file("${params.project}_recal.indel.vcf.gz"), file("${params.project}_recal.indel.vcf.gz.tbi") into varCalIndel_out
 
-    //--resource $params.indel_1G \\
-    //--resource_param $params.indel_1G_par \\
     """
     module load sentieon/201711.05
     sentieon driver \\
