@@ -44,6 +44,7 @@ log.info """\
 
 demuxing = params.isDemuxNeeded
 // feature isn't added will need to add if we ever push data through that doesn't need an interval file (WGS data)
+interval = params.isIntervalNeeded
 
 if ( demuxing ) {
     
