@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH --time=5-00:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --nodes=1
 #SBATCH -o pipelineKickOff-%j.out
 #SBATCH -e pipelineKickOff-%j.err
@@ -23,7 +23,7 @@ scratchDir=$scr/run-node-nf
 if [[ $resume == "resume" ]]; then
     if [ -d $scratchDir ]; then
         echo -e "\nResuming your previous run\n"
-        #cp ./sentieon.nf ./nextflow.config $scratchDir
+        cp ./sentieon.nf ./nextflow.config $scratchDir
         #cp -r ./bin $scratchDir
         cd $scratchDir
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf -resume
