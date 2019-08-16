@@ -6,8 +6,8 @@
 #SBATCH -e pipelineKickOff-%j.err
 #SBATCH --mail-user=julio.fierro@hsc.utah.edu,scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
-#SBATCH --account=notchpeak-shared
-#SBATCH --partition=notchpeak-shared
+#SBATCH --account=pezzolesi-np
+#SBATCH --partition=pezzolesi-shared-np
 ##SBATCH --partition=ember
 #SBATCH --ntasks=6
 #SBATCH --mem=32G
@@ -23,7 +23,7 @@ scratchDir=$scr/run-node-nf
 if [[ $resume == "resume" ]]; then
     if [ -d $scratchDir ]; then
         echo -e "\nResuming your previous run\n"
-        #cp ./sentieon.nf ./nextflow.config $scratchDir
+        cp ./sentieon.nf ./nextflow.config $scratchDir
         #cp -r ./bin $scratchDir
         cd $scratchDir
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf -resume
