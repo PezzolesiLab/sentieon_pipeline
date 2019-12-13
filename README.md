@@ -22,7 +22,7 @@ The pipeline is designed to run on the Pezzolesi node (notch026). Our node has 3
 
 ## runSentieonPL.sh File
 
-You need to make sure that the `scratchDir` variable in this file matches the scratch directory you specify in the config file.
+You need to make sure that the `scratchDir` variable in this file matches the `scratch` variable you specify in your `nextflow.config` file.
 
 ## Starting the Pipeline
 
