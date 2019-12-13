@@ -15,15 +15,14 @@ This `nextflow.config` file and the `runSentieonPL.sh` script should be the only
 The `nextflow.config` file contains all of the parameters specific to your project that nextflow needs to successfully run your
 data through to the end. In the `params` section, you'll want to make sure that the following variables are set to work with your
 data: `project`, `dataDir`, `isDemuxNeeded`, `barcodeFile`, `sampleKey`, `isIntervalNeeded`, and `bedFile`. In the `process`
-section, you should only change the `clusterOptions` variable. The `clusterOptions` variable sets the SLURM parameters for each
-job that is scheduled to a CHPC cluster.
+section, you should only change the `clusterOptions` and the `scratch` variables. The `clusterOptions` variable sets the SLURM parameters for each
+job that is scheduled to a CHPC cluster. The `scratch` directory specifies the directory where the heavy lifting will be done and where the end results of the pipeline. Be sure that the `scratch` variable matches the `scratchDir` variable in the `runSentieonPL.sh` script.
 
 The pipeline is designed to run on the Pezzolesi node (notch026). Our node has 32 CPUs on it. By using the "shared" feature, we can schedule jobs on each of these CPUs individually or on groups of them. Once it's running, nextflow should run on a small set of CPUs, the subsequent jobs will be scheduled using the remaining CPUs. The command that controls this behavior is `clusterOptions`.
 
 ## runSentieonPL.sh File
 
-You need to make sure that the `scratchDir` variable in this file matches the scratch directory you specify in the config file.can change the name of the scratch directory you wish to save your project to by
-modifying the `scratchDir` variable.
+You need to make sure that the `scratchDir` variable in this file matches the scratch directory you specify in the config file.
 
 ## Starting the Pipeline
 
