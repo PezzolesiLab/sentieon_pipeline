@@ -16,15 +16,15 @@
 resume=$1
 # rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
 scratchDir=$scr/run-node-nf
-# rename this vvvv to change clusters (e.g. kingspeak, notchpeak, ember, lonepeak, etc.)
-#SLURM_CLUSTERS="notchpeak"
-#export SLURM_CLUSTERS
+# IGNORE: rename this vvvv to change clusters (e.g. kingspeak, notchpeak, ember, lonepeak, etc.)
+# IGNORE: SLURM_CLUSTERS="notchpeak"
+# IGNORE: export SLURM_CLUSTERS
 
 if [[ $resume == "resume" ]]; then
     if [ -d $scratchDir ]; then
         echo -e "\nResuming your previous run\n"
-        #cp ./sentieon.nf ./nextflow.config $scratchDir
-        #cp -r ./bin $scratchDir
+        cp ./sentieon.nf ./nextflow.config $scratchDir
+        cp -r ./bin $scratchDir
         cd $scratchDir
         nextflow run -with-report -with-trace -with-timeline -with-dag dag.html sentieon.nf -resume
     else
@@ -42,5 +42,5 @@ elif [[ $resume == "new" ]]; then
         echo "A project already exists. Delete it and start over or resume it"
     fi
 else
-    echo "takes string argument 'resume' or 'new'"
+    echo "Takes string argument 'resume' or 'new'"
 fi
