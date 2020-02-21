@@ -15,7 +15,10 @@
 # this vvvv should be either 'resume' or 'new'
 resume=$1
 # rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
-scratchDir=$scr/run-node-nf
+#var=$(cat nextflow.config | grep "scratch =")--|
+#IFS="\"" read -ra varArr <<< $var              |- cant get to work yet
+#scratchDir=${varArr[1]}                      --|
+scratchDir=$scr/joslin_wes
 # IGNORE: rename this vvvv to change clusters (e.g. kingspeak, notchpeak, ember, lonepeak, etc.)
 # IGNORE: SLURM_CLUSTERS="notchpeak"
 # IGNORE: export SLURM_CLUSTERS
