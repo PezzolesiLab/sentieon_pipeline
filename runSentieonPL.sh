@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH --time=0-02:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --nodes=1
 #SBATCH -o pipelineKickOff-%j.out
 #SBATCH -e pipelineKickOff-%j.err
@@ -42,5 +42,5 @@ elif [[ $resume == "new" ]]; then
         echo "A project already exists. Delete it and start over or resume it"
     fi
 else
-    echo "takes string argument 'resume' or 'new'"
+    echo "Takes string argument 'resume' or 'new'"
 fi
