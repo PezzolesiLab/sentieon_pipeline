@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-#SBATCH --time=1-00:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
-#SBATCH -o pipelineKickOff-%j.out
-#SBATCH -e pipelineKickOff-%j.err
+#SBATCH -o pipelineKickOff-febTest-%j.out
+#SBATCH -e pipelineKickOff-febTest-%j.err
 #SBATCH --mail-user=julio.fierro@hsc.utah.edu,scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
 #SBATCH --account=pezzolesi-np
