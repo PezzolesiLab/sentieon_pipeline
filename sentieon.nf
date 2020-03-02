@@ -284,7 +284,6 @@ gunzip_fq_out
     
 process BWA {
     tag { sample_id }
-    echo true 
     beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
     cache 'deep'
 
@@ -305,7 +304,6 @@ process BWA {
     module load sentieon/201711.05
 
     export RG=$(pezzAlign !{fq1})
-    echo $MODULEPATH
     module load sentieon/201711.05
 
     ( bwa mem -M \\
