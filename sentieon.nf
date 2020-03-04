@@ -25,7 +25,7 @@ log.info """\
 
     -- Software dependencies --
        March 21 2019: Not sure if including these executables in the ./bin will work
-       annovar (currently pointing to my copy)
+       annovar (currently pointing to my copy of the .pl script but the pezzolesi-group1 copy of the annovar DB)
        fastp/0.19.6
        multiqc/1.7
        cutadapt/1.6 or higher
@@ -748,7 +748,7 @@ process annotateFinalVCF {
     '''
     /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/table_annovar.pl \\
         !{vcf} \\
-        /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/humandb/ \\
+        /uufs/chpc.utah.edu/common/home/pezzolesi-group1/resources/annovar/hg19 \\
         --buildver hg19 \\
         --out !{params.project}_complete \\
         --remove \\
