@@ -2,8 +2,8 @@
 
 #SBATCH --time=1-00:00:00
 #SBATCH --nodes=1
-#SBATCH -o pipelineKickOff-%j.out
-#SBATCH -e pipelineKickOff-%j.err
+#SBATCH -o pipelineKickOff-marchTest-%j.out
+#SBATCH -e pipelineKickOff-marchTest-%j.err
 #SBATCH --mail-user=julio.fierro@hsc.utah.edu,scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
 #SBATCH --account=pezzolesi-np
@@ -15,7 +15,7 @@
 # this vvvv should be either 'resume' or 'new'
 resume=$1
 # rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
-scratchDir=$scr/run-node-nf
+scratchDir=$scr/joslin_wes_master
 # rename this vvvv to change clusters (e.g. kingspeak, notchpeak, ember, lonepeak, etc.)
 #SLURM_CLUSTERS="notchpeak"
 #export SLURM_CLUSTERS

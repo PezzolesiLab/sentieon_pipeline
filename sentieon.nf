@@ -757,12 +757,12 @@ process annotateFinalVCF {
     '''
     /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/table_annovar.pl \\
         !{vcf} \\
-        /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/humandb/ \\
+        /uufs/chpc.utah.edu/common/home/pezzolesi-group1/resources/annovar/hg19/ \\
         --buildver hg19 \\
         --out !{params.project}_complete \\
         --remove \\
-        --protocol refGene,ensGene,knownGene,dbnsfp30a,gnomad_genome,exac03,revel \\
-        --operation g,g,g,f,f,f,g \\
+        --protocol refGene,dbnsfp33a,avsnp150,clinvar_20190305,gnomad211_genome,gnomad211_exome,revel \\
+        --operation g,f,f,f,f,f,f \\
         --nastring . \\
         --vcfinput
     '''
