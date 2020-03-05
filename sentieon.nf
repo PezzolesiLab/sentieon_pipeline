@@ -41,10 +41,8 @@ log.info """\
     
     ==================================
 """
-
+/*
 demuxing = params.isDemuxNeeded
-// feature isn't added will need to add if we ever push data through that doesn't need an interval file (WGS data)
-interval = params.isIntervalNeeded
 
 if ( demuxing ) {
     
@@ -540,12 +538,44 @@ process haplotyper {
     tabix -p vcf "!{sample_id}.g.vcf.gz"
     '''
 } 
+*/
 
-haplotyper_out
-    .toSortedList()
-    .transpose()
-    .first()
-    .set { gvcfTyper_in }
+testing = params.test
+backgroundJointCalling = params.jointCallWithBackground
+
+if (backgroundJointCalling) {
+    if (testing) {
+        testGVCF_channel = Channel
+            .fromPath( "${params.testGVCFs}" )
+
+        backgroundGVCF_channel = Channel
+            .fromPath( "${params.pathToBackgroundGVCFs}" )
+
+        testGVCF_channel
+            .concat(backgroundGVCF_channel)
+            .toSortedList()
+            .set { gvcfTyper_in }
+    } else {
+        haplotyper_out
+            .toSortedList()
+            .transpose()
+            .first()
+            .set { toCombineWithBackground }
+
+        backgroundGVCF_channel = Channel
+            .fromPath( "${params.pathToBackgroundGVCFs}" )
+
+        toCombineWithBackground
+            .concat(backgroundGVCF_channel)
+            .set { gvcfTyper_in }
+    }
+} else {
+    haplotyper_out
+        .toSortedList()
+        .transpose()
+        .first()
+        .set { gvcfTyper_in }
+}
 
 process gvcfTyper {
     tag { "$params.project" }
@@ -768,50 +798,50 @@ process annotateFinalVCF {
     '''
 }
 
-fastqc_done
-    .unique()
-    .set { allFastqc }
-
-samStats_done
-    .unique()
-    .set { allSamStats }
-
-samFlagstat_done
-    .unique()
-    .set { allFlagStat }
-
-coverage_done
-    .unique()
-    .set { allCoverage }
-
-finalStats_done
-    .unique()
-    .set { allFinalStats }
-
-graph_done
-    .unique()
-    .concat(allFastqc, allSamStats, allFlagStat, allCoverage, allFinalStats)
-    .toList()
-    .set { multiqc_greenlight }
-
-process multiqc {
-    tag { "$params.project" }
-
-    publishDir "${params.multiqc}", mode: 'copy'
-
-    input:
-    val greenlights from multiqc_greenlight
-
-    output:
-    file("${params.project}.multiqc.report.html")
-
-    when:
-    greenlights.size() == 6
-
-    """
-    multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
-    """
-}
+//fastqc_done
+//    .unique()
+//    .set { allFastqc }
+//
+//samStats_done
+//    .unique()
+//    .set { allSamStats }
+//
+//samFlagstat_done
+//    .unique()
+//    .set { allFlagStat }
+//
+//coverage_done
+//    .unique()
+//    .set { allCoverage }
+//
+//finalStats_done
+//    .unique()
+//    .set { allFinalStats }
+//
+//graph_done
+//    .unique()
+//    .concat(allFastqc, allSamStats, allFlagStat, allCoverage, allFinalStats)
+//    .toList()
+//    .set { multiqc_greenlight }
+//
+//process multiqc {
+//    tag { "$params.project" }
+//
+//    publishDir "${params.multiqc}", mode: 'copy'
+//
+//    input:
+//    val greenlights from multiqc_greenlight
+//
+//    output:
+//    file("${params.project}.multiqc.report.html")
+//
+//    when:
+//    greenlights.size() == 6
+//
+//    """
+//    multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
+//    """
+//}
 
 workflow.onComplete {
     println "Pipeline completed at: $workflow.complete"
