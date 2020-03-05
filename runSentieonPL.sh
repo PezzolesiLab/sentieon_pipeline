@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH --time=1-00:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
 #SBATCH -o pipelineKickOff-marchTest-%j.out
 #SBATCH -e pipelineKickOff-marchTest-%j.err
@@ -16,9 +16,12 @@
 resume=$1
 # rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
 scratchDir=$scr/joslin_wes_master
-# rename this vvvv to change clusters (e.g. kingspeak, notchpeak, ember, lonepeak, etc.)
-#SLURM_CLUSTERS="notchpeak"
-#export SLURM_CLUSTERS
+#var=$(cat nextflow.config | grep "scratch =")--|
+#IFS="\"" read -ra varArr <<< $var              |- cant get to work yet
+#scratchDir=${varArr[1]}                      --|
+# IGNORE: rename this vvvv to change clusters (e.g. kingspeak, notchpeak, ember, lonepeak, etc.)
+# IGNORE: SLURM_CLUSTERS="notchpeak"
+# IGNORE: export SLURM_CLUSTERS
 
 if [[ $resume == "resume" ]]; then
     if [ -d $scratchDir ]; then

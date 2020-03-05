@@ -26,7 +26,7 @@ log.info """\
 
     -- Software dependencies --
        March 21 2019: Not sure if including these executables in the ./bin will work
-       annovar (currently pointing to my copy)
+       annovar (currently pointing to my copy of the .pl script but the pezzolesi-group1 copy of the annovar DB)
        fastp/0.19.6
        multiqc/1.7
        cutadapt/1.6 or higher
