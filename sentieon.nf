@@ -557,9 +557,7 @@ if (backgroundJointCalling) {
             .set { gvcfTyper_in }
     } else {
         haplotyper_out
-            .toSortedList()
-            .transpose()
-            .first()
+            .filter{ ( it =~ /gz$/ ) }
             .set { toCombineWithBackground }
 
         backgroundGVCF_channel = Channel
@@ -567,6 +565,7 @@ if (backgroundJointCalling) {
 
         toCombineWithBackground
             .concat(backgroundGVCF_channel)
+            .toSortedList()
             .set { gvcfTyper_in }
     }
 } else {
@@ -703,8 +702,6 @@ process varCalIndel {
     output:
     set file(snp_recal_file), file(index), file("${params.project}_recal.tranches.indel"), file("${params.project}_recal.indel.vcf.gz"), file("${params.project}_recal.indel.vcf.gz.tbi") into varCalIndel_out
 
-    //--resource $params.indel_1G \\
-    //--resource_param $params.indel_1G_par \\
     """
     module load sentieon/201711.05
     sentieon driver \\
@@ -716,6 +713,8 @@ process varCalIndel {
     --tranches_file "${params.project}_recal.tranches.indel" \\
     --resource $params.indel_mills \\
     --resource_param $params.indel_mills_par \\
+    --resource $params.indel_1G \\
+    --resource_param $params.indel_1G_par \\
     --annotation DP \\
     --annotation MQRankSum \\
     --annotation ReadPosRankSum \\
@@ -750,6 +749,7 @@ process applyVarCalIndel {
     "${params.project}_complete.vcf.gz"
     """
 }
+
 appliedIndel_out.into { vcfStats_in; annotateVCF_in }
 
 process finalStats {
@@ -798,50 +798,50 @@ process annotateFinalVCF {
     '''
 }
 
-//fastqc_done
-//    .unique()
-//    .set { allFastqc }
-//
-//samStats_done
-//    .unique()
-//    .set { allSamStats }
-//
-//samFlagstat_done
-//    .unique()
-//    .set { allFlagStat }
-//
-//coverage_done
-//    .unique()
-//    .set { allCoverage }
-//
-//finalStats_done
-//    .unique()
-//    .set { allFinalStats }
-//
-//graph_done
-//    .unique()
-//    .concat(allFastqc, allSamStats, allFlagStat, allCoverage, allFinalStats)
-//    .toList()
-//    .set { multiqc_greenlight }
-//
-//process multiqc {
-//    tag { "$params.project" }
-//
-//    publishDir "${params.multiqc}", mode: 'copy'
-//
-//    input:
-//    val greenlights from multiqc_greenlight
-//
-//    output:
-//    file("${params.project}.multiqc.report.html")
-//
-//    when:
-//    greenlights.size() == 6
-//
-//    """
-//    multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
-//    """
-//}
+fastqc_done
+    .unique()
+    .set { allFastqc }
+
+samStats_done
+    .unique()
+    .set { allSamStats }
+
+samFlagstat_done
+    .unique()
+    .set { allFlagStat }
+
+coverage_done
+    .unique()
+    .set { allCoverage }
+
+finalStats_done
+    .unique()
+    .set { allFinalStats }
+
+graph_done
+    .unique()
+    .concat(allFastqc, allSamStats, allFlagStat, allCoverage, allFinalStats)
+    .toList()
+    .set { multiqc_greenlight }
+
+process multiqc {
+    tag { "$params.project" }
+
+    publishDir "${params.multiqc}", mode: 'copy'
+
+    input:
+    val greenlights from multiqc_greenlight
+
+    output:
+    file("${params.project}.multiqc.report.html")
+
+    when:
+    greenlights.size() == 6
+
+    """
+    multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
+    """
+}
 
 workflow.onComplete {
     println "Pipeline completed at: $workflow.complete"

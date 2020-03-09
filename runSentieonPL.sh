@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-#SBATCH --time=2-00:00:00
+#SBATCH --time=5-00:00:00
 #SBATCH --nodes=1
-#SBATCH -o pipelineKickOff-marchTest-%j.out
-#SBATCH -e pipelineKickOff-marchTest-%j.err
-#SBATCH --mail-user=julio.fierro@hsc.utah.edu,scott.frodsham@hsc.utah.edu
+#SBATCH -o pipelineKickOff-%j.out
+#SBATCH -e pipelineKickOff-%j.err
+#SBATCH --mail-user=scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
 #SBATCH --account=pezzolesi-np
 #SBATCH --partition=pezzolesi-shared-np
