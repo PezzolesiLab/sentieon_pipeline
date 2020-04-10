@@ -3,10 +3,11 @@ work/
 old/
 *.err
 *.out
-test*/
+*test*/
 *practice*/
 real*/
 filtering/
+test*
 nextflow.config
 .DS*
 ._.DS*
