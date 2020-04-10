@@ -41,7 +41,6 @@ log.info """\
     
     ==================================
 """
-/*
 demuxing = params.isDemuxNeeded
 
 if ( demuxing ) {
@@ -538,7 +537,6 @@ process haplotyper {
     tabix -p vcf "!{sample_id}.g.vcf.gz"
     '''
 } 
-*/
 
 testing = params.test
 backgroundJointCalling = params.jointCallWithBackground
