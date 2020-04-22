@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 
-#SBATCH --time=2-00:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --nodes=1
-#SBATCH -o pipelineKickOff-marchTest-%j.out
-#SBATCH -e pipelineKickOff-marchTest-%j.err
-#SBATCH --mail-user=julio.fierro@hsc.utah.edu,scott.frodsham@hsc.utah.edu
+#SBATCH -o pipelineKickOff-%j.out
+#SBATCH -e pipelineKickOff-%j.err
+#SBATCH --mail-user=scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
-#SBATCH --account=pezzolesi-np
-#SBATCH --partition=pezzolesi-shared-np
-##SBATCH --partition=ember
+#SBATCH --account=pezzolesi
+#SBATCH --partition=notchpeak-shared
 #SBATCH --ntasks=6
 #SBATCH --mem=32G
 
 # this vvvv should be either 'resume' or 'new'
 resume=$1
 # rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
-scratchDir=$scr/joslin_wes_master
+scratchDir=$scr/sentieonJoslinFamTargSeq
 #var=$(cat nextflow.config | grep "scratch =")--|
 #IFS="\"" read -ra varArr <<< $var              |- cant get to work yet
 #scratchDir=${varArr[1]}                      --|
