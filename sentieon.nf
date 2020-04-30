@@ -42,6 +42,8 @@ log.info """\
     ==================================
 """
 
+// after merging master and bamstart: should be able to start from bam, if fastq start can process targseq (only demux) and WES
+// no bcftools merge and no annovar
 demuxing = params.isDemuxNeeded
 // feature isn't added will need to add if we ever push data through that doesn't need an interval file (WGS data)
 interval = params.isIntervalNeeded
@@ -925,7 +927,7 @@ if (!bamStart) {
         .toList()
         .set { multiqc_greenlight }
 }
-
+gg
 //graph_done
 //    .unique()
 //    .concat(allFastqc, allSamStats, allFlagStat, allCoverage, allFinalStats)
