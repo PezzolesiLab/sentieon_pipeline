@@ -697,7 +697,7 @@ process applyVarCalSnp {
     --var_type SNP \\
     --recal $recalVCF \\
     --tranches_file $snpTranchFile \\
-    --sensitivity 90 \\
+    --sensitivity "${params.truthSensitivity}" \\
     "${params.project}_applyRecal.snp.vcf.gz"
     """
 }
