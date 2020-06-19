@@ -737,7 +737,7 @@ process applyVarCalIndel {
     tag { "$params.project" }
     beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
-    //publishDir "${params.vcf}", mode: 'copy'
+    publishDir "${params.vcf}", mode: 'copy'
 
     input:
     set file(snp_recal_file), file(recal_index), file(IndelTranch), file(recalVCF), file(index) from varCalIndel_out
