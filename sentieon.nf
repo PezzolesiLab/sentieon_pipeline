@@ -596,7 +596,7 @@ process gvcfTyper {
     val gvcfs from gvcfTyper_in
 
     output:
-    file ("${params.project}.vcf.gz") into gvcfTyper_out
+    file ("${params.project}_noVQSR.vcf.gz"), file("${params.project}_noVQSR.vcf.gz.tbi") into gvcfTyper_out
 
     shell:
 
@@ -609,46 +609,46 @@ process gvcfTyper {
     -r !{params.reference} \\
     --interval !{params.tiledBedFile} \\
     --algo GVCFtyper \\
-    "!{params.project}.vcf.gz" \\
+    "!{params.project}_noVQSR.vcf.gz" \\
     -v !{inputGVCFs}
     '''
 }
 
-gvcfTyper_out
-    .unique()
-    .toList()
-    .set { mergeGVCFs_in }
-
-process mergeGVCFs {
-    tag { "$params.project" }
-    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
-    
-    publishDir "${params.vcf}", mode: 'copy'
-
-    input:
-    val chrFiles from mergeGVCFs_in
-
-    output:
-    set file("${params.project}_merged.vcf.gz"), file("${params.project}_merged.vcf.gz.tbi") into mergeGVCFs_out
-
-    shell:
-
-    inputVCFs = chrFiles.join(' ')
-
-    '''
-    module load bcftools/1.7
-    module load tabix/1.7
-    bcftools concat --thread !{params.cpus_left} -O z !{inputVCFs} -o "!{params.project}_merged.vcf.gz"
-    tabix -p vcf "!{params.project}_merged.vcf.gz"
-    '''
-}
+//gvcfTyper_out
+//    .unique()
+//    .toList()
+//    .set { mergeGVCFs_in }
+//
+//process mergeGVCFs {
+//    tag { "$params.project" }
+//    beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
+//    
+//    publishDir "${params.vcf}", mode: 'copy'
+//
+//    input:
+//    val chrFiles from mergeGVCFs_in
+//
+//    output:
+//    set file("${params.project}_merged.vcf.gz"), file("${params.project}_merged.vcf.gz.tbi") into mergeGVCFs_out
+//
+//    shell:
+//
+//    inputVCFs = chrFiles.join(' ')
+//
+//    '''
+//    module load bcftools/1.7
+//    module load tabix/1.7
+//    bcftools concat --thread !{params.cpus_left} -O z !{inputVCFs} -o "!{params.project}_merged.vcf.gz"
+//    tabix -p vcf "!{params.project}_merged.vcf.gz"
+//    '''
+//}
 
 process varCalSnp {
     tag { "$params.project" }
     beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
 
     input:
-    set file(merged_vcf), file(index) from mergeGVCFs_out
+    set file(merged_vcf), file(index) from gvcfTyper_out
 
     output:
     set file(merged_vcf), file(index), file("${params.project}_recal.tranches.snp"), file("${params.project}_recal.snp.vcf.gz"), file("${params.project}_recal.snp.vcf.gz.tbi") into varCalSNP_out
@@ -743,7 +743,7 @@ process applyVarCalIndel {
     set file(snp_recal_file), file(recal_index), file(IndelTranch), file(recalVCF), file(index) from varCalIndel_out
 
     output:
-    set file("${params.project}_complete.vcf.gz"), file("${params.project}_complete.vcf.gz.tbi") into appliedIndel_out
+    set file("${params.project}_VQSR${params.truthSensitivity}.vcf.gz"), file("${params.project}_VQSR${[arams.truthSensitivity}.vcf.gz.tbi") into appliedIndel_out
 
     """
     module load sentieon/201711.05
@@ -755,8 +755,8 @@ process applyVarCalIndel {
     --var_type INDEL \\
     --recal $recalVCF \\
     --tranches_file $IndelTranch \\
-    --sensitivity 90 \\
-    "${params.project}_complete.vcf.gz"
+    --sensitivity "${params.truthSensitivity}" \\
+    "${params.project}_VQSR.vcf.gz"
     """
 }
 
@@ -773,7 +773,7 @@ process finalStats {
 
     output:
     file("${params.project}_FinalVCF.stats" )
-    val 'bcfstats_complete' into finalStats_done
+    val 'bcfstats_complete' into multiqc_greenlight
 
     shell:
     '''
@@ -782,31 +782,31 @@ process finalStats {
     '''
 }
 
-process annotateFinalVCF {
-    tag { "$params.project" }
-
-    publishDir "${params.annotatedVCF}", mode: 'copy'
-
-    input:
-    set file(vcf), file(index) from annotateVCF_in
-
-    output:
-    file("${params.project}_complete.hg19_multianno.vcf")
-
-    shell:
-    '''
-    /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/table_annovar.pl \\
-        !{vcf} \\
-        /uufs/chpc.utah.edu/common/home/pezzolesi-group1/resources/annovar/hg19/ \\
-        --buildver hg19 \\
-        --out !{params.project}_complete \\
-        --remove \\
-        --protocol refGene,dbnsfp33a,avsnp150,clinvar_20190305,gnomad211_genome,gnomad211_exome,revel \\
-        --operation g,f,f,f,f,f,f \\
-        --nastring . \\
-        --vcfinput
-    '''
-}
+//process annotateFinalVCF {
+//    tag { "$params.project" }
+//
+//    publishDir "${params.annotatedVCF}", mode: 'copy'
+//
+//    input:
+//    set file(vcf), file(index) from annotateVCF_in
+//
+//    output:
+//    file("${params.project}_complete.hg19_multianno.vcf")
+//
+//    shell:
+//    '''
+//    /uufs/chpc.utah.edu/common/home/u6013142/modules/annovar/table_annovar.pl \\
+//        !{vcf} \\
+//        /uufs/chpc.utah.edu/common/home/pezzolesi-group1/resources/annovar/hg19/ \\
+//        --buildver hg19 \\
+//        --out !{params.project}_complete \\
+//        --remove \\
+//        --protocol refGene,dbnsfp33a,avsnp150,clinvar_20190305,gnomad211_genome,gnomad211_exome,revel \\
+//        --operation g,f,f,f,f,f,f \\
+//        --nastring . \\
+//        --vcfinput
+//    '''
+//}
 
 //if ( !bamStart ) {
 //fastqc_done
@@ -835,24 +835,21 @@ process annotateFinalVCF {
 //    .toList()
 //    .set { multiqc_greenlight }
 //
-//process multiqc {
-//    tag { "$params.project" }
-//
-//    publishDir "${params.multiqc}", mode: 'copy'
-//
-//    input:
-//    val greenlights from multiqc_greenlight
-//
-//    output:
-//    file("${params.project}.multiqc.report.html")
-//
-//    when:
-//    greenlights.size() == 6
-//
-//    """
-//    multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
-//    """
-//}
+process multiqc {
+    tag { "$params.project" }
+
+    publishDir "${params.multiqc}", mode: 'copy'
+
+    input:
+    val greenlights from multiqc_greenlight
+
+    output:
+    file("${params.project}.multiqc.report.html")
+
+    """
+    multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
+    """
+}
 
 workflow.onComplete {
     println "Pipeline completed at: $workflow.complete"
