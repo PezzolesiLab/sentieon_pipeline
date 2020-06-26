@@ -15,7 +15,7 @@
 resume=$1
 configFile=$2
 # rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
-scratchDir="$scr/sentieonGvcfWES90"
+scratchDir="$scr/sentieonJoslinGvcfWES"
 #var=$(cat nextflow.config | grep "scratch =")--|
 #IFS="\"" read -ra varArr <<< $var              |- cant get to work yet
 #scratchDir=${varArr[1]}                      --|
@@ -37,7 +37,7 @@ if [ -z $2 ]; then
     elif [[ $resume == "new" ]]; then
         if [ ! -d $scratchDir ]; then
             echo -e "\nStarting a new project\n"
-            mkdir -p $scratchDir/{results/{fastp,fastqc,bqsr,bam/{stats,coverage},gvcf,vcf/stats},bin}
+            mkdir -p $scratchDir/{results/{fastp,fastqc,bqsr,vqsr,bam/{stats,coverage},gvcf,vcf/stats},bin}
             cp ./sentieon.nf ./nextflow.config $scratchDir
             cp -r ./bin $scratchDir
             cd $scratchDir
@@ -62,7 +62,7 @@ else
     elif [[ $resume == "new" ]]; then
         if [ ! -d $scratchDir ]; then
             echo -e "\nStarting a new project\n"
-            mkdir -p $scratchDir/{results/{fastp,fastqc,bqsr,bam/{stats,coverage},gvcf,vcf/stats},bin}
+            mkdir -p $scratchDir/{results/{fastp,fastqc,bqsr,vqsr,bam/{stats,coverage},gvcf,vcf/stats},bin}
             cp ./sentieon.nf $configFile $scratchDir
             cp -r ./bin $scratchDir
             cd $scratchDir

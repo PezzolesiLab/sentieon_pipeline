@@ -546,13 +546,13 @@ if( !gvcfStart) {
 
 if (backgroundJointCalling) {
     if (gvcfStart) {
-        testGVCF_channel = Channel
+        gVCF_channel = Channel
             .fromPath( "${params.dataDir}" )
 
         backgroundGVCF_channel = Channel
             .fromPath( "${params.pathToBackgroundGVCFs}" )
 
-        testGVCF_channel
+        gVCF_channel
             .concat(backgroundGVCF_channel)
             .toSortedList()
             .set { gvcfTyper_in }
@@ -596,7 +596,7 @@ process gvcfTyper {
     val gvcfs from gvcfTyper_in
 
     output:
-    file ("${params.project}_noVQSR.vcf.gz"), file("${params.project}_noVQSR.vcf.gz.tbi") into gvcfTyper_out
+    set file ("${params.project}_noVQSR.vcf.gz"), file("${params.project}_noVQSR.vcf.gz.tbi") into gvcfTyper_out
 
     shell:
 
@@ -661,7 +661,13 @@ process varCalSnp {
     --algo VarCal \\
     --vcf $merged_vcf \\
     --var_type SNP \\
+    --tranche 90 \\
+    --tranche 99 \\
+    --tranche 99.9 \\
+    --tranche 99.95 \\
+    --tranche 100 \\
     --tranches_file "${params.project}_recal.tranches.snp" \\
+    --plot_file "${params.vqsr}" \\
     --resource $params.hapmap \\
     --resource_param $params.hapmap_par \\
     --resource $params.omni \\
@@ -697,7 +703,7 @@ process applyVarCalSnp {
     --var_type SNP \\
     --recal $recalVCF \\
     --tranches_file $snpTranchFile \\
-    --sensitivity "${params.truthSensitivity}" \\
+    --sensitivity "${params.truthSensitivitySnp}" \\
     "${params.project}_applyRecal.snp.vcf.gz"
     """
 }
@@ -720,7 +726,13 @@ process varCalIndel {
     --algo VarCal \\
     --vcf $snp_recal_file \\
     --var_type INDEL \\
+    --tranche 90 \\
+    --tranche 99 \\
+    --tranche 99.4 \\
+    --tranche 99.9 \\
+    --tranche 100 \\
     --tranches_file "${params.project}_recal.tranches.indel" \\
+    --plot_file "${params.vqsr}" \\
     --resource $params.indel_mills \\
     --resource_param $params.indel_mills_par \\
     --resource $params.indel_1G \\
@@ -743,7 +755,7 @@ process applyVarCalIndel {
     set file(snp_recal_file), file(recal_index), file(IndelTranch), file(recalVCF), file(index) from varCalIndel_out
 
     output:
-    set file("${params.project}_VQSR${params.truthSensitivity}.vcf.gz"), file("${params.project}_VQSR${[arams.truthSensitivity}.vcf.gz.tbi") into appliedIndel_out
+    set file("${params.project}_VQSR.vcf.gz"), file("${params.project}_VQSR.vcf.gz.tbi") into appliedIndel_out
 
     """
     module load sentieon/201711.05
@@ -755,7 +767,7 @@ process applyVarCalIndel {
     --var_type INDEL \\
     --recal $recalVCF \\
     --tranches_file $IndelTranch \\
-    --sensitivity "${params.truthSensitivity}" \\
+    --sensitivity "${params.truthSensitivityIndel}" \\
     "${params.project}_VQSR.vcf.gz"
     """
 }
@@ -835,13 +847,14 @@ process finalStats {
 //    .toList()
 //    .set { multiqc_greenlight }
 //
+
 process multiqc {
     tag { "$params.project" }
 
     publishDir "${params.multiqc}", mode: 'copy'
 
     input:
-    val greenlights from multiqc_greenlight
+    val greenlight from multiqc_greenlight
 
     output:
     file("${params.project}.multiqc.report.html")
@@ -852,6 +865,6 @@ process multiqc {
 }
 
 workflow.onComplete {
-    println "Pipeline completed at: $workflow.complete"
-    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+    log.info "Pipeline completed at: $workflow.complete"
+    log.info "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
 }
