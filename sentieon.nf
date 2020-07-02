@@ -1,7 +1,5 @@
 #!/usr/bin/nextflow
 
-       //1G indels: $params.indel_1G 
-       //1G indels: $params.indel_1G_par 
 log.info """\
     ==================================
               Pezzolesi Lab           
@@ -12,17 +10,21 @@ log.info """\
        reference: $params.reference 
        dbsnp: $params.dbsnp 
        hapmap: $params.hapmap
+       omni: $params.omni
        1G snps: $params.snp_1G
+       1G indels: $params.indel_1G 
        mills indels: $params.indel_mills
 
     -- Set to the following parameters --
        hapmap: $params.hapmap_par 
+       omni: $params.omni_par
        1G snps: $params.snp_1G_par 
+       1G indels: $params.indel_1G_par 
        mills indels: $params.indel_mills_par
 
     -- Using the following region bed files --
-       Affy: $params.targetedBedFile
-       Affy: $params.tiledBedFile
+       Targeted BED: $params.targetedBedFile
+       Tiled BED: $params.tiledBedFile
 
     -- Software dependencies --
        March 21 2019: Not sure if including these executables in the ./bin will work
