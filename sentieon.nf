@@ -662,12 +662,17 @@ process varCalSnp {
     --vcf $merged_vcf \\
     --var_type SNP \\
     --tranche 90 \\
+    --tranche 95 \\
     --tranche 99 \\
+    --tranche 99.5 \\
+    --tranche 99.6 \\
+    --tranche 99.7 \\
+    --tranche 99.8 \\
     --tranche 99.9 \\
     --tranche 99.95 \\
     --tranche 100 \\
     --tranches_file "${params.project}_recal.tranches.snp" \\
-    --plot_file "${params.vqsr}" \\
+    --plot_file "${params.vqsr}/${params.project}_vqsrPlot.snp.txt" \\
     --resource $params.hapmap \\
     --resource_param $params.hapmap_par \\
     --resource $params.omni \\
@@ -727,12 +732,15 @@ process varCalIndel {
     --vcf $snp_recal_file \\
     --var_type INDEL \\
     --tranche 90 \\
+    --tranche 95 \\
+    --tranche 96 \\
+    --tranche 97 \\
+    --tranche 98 \\
     --tranche 99 \\
-    --tranche 99.4 \\
-    --tranche 99.9 \\
+    --tranche 99.5 \\
     --tranche 100 \\
     --tranches_file "${params.project}_recal.tranches.indel" \\
-    --plot_file "${params.vqsr}" \\
+    --plot_file "${params.vqsr}/${params.project}_vqsrPlot.indel.txt" \\
     --resource $params.indel_mills \\
     --resource_param $params.indel_mills_par \\
     --resource $params.indel_1G \\
