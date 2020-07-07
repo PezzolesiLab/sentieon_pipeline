@@ -1,4 +1,9 @@
 .nextflow*
+*Fqs*
+*fq*
+*Fastq*
+*fastq*
+*test*
 work/
 old/
 *.err
