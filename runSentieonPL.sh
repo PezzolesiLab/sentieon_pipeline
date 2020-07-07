@@ -15,7 +15,7 @@
 resume=$1
 configFile=$2
 # rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
-scratchDir="$scr/sentieonJoslinGvcfWESBackgrounds"
+scratchDir="$scr/sentieonJoslinGvcfTargSeq"
 #var=$(cat nextflow.config | grep "scratch =")--|
 #IFS="\"" read -ra varArr <<< $var              |- cant get to work yet
 #scratchDir=${varArr[1]}                      --|
