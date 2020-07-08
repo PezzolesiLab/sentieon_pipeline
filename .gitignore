@@ -10,6 +10,7 @@ old/
 *.out
 *test*/
 *practice*/
+*test*
 real*/
 filtering/
 test*
