@@ -52,8 +52,8 @@ isTargSeq    = params.isTargSeq
 gvcfStart    = params.startingFromGvcfs
 twoFqs       = params.inputTwoFastqs
 
-if ( !gvcfStart) {
-    if ( !bamStart) {
+if ( !gvcfStart ) {
+    if ( !bamStart ) {
         if ( twoFqs ) {
             if ( demuxing ) {
             
@@ -156,16 +156,16 @@ if ( !gvcfStart) {
 
                 rename_in
                   .map { renameList -> 
-                      myfq1 = file(renameList[0])
-                      r1    = renameList[1]
-                      newid = renameList[4]
-                      dir1  = myfq1.getParent()
+                      myfq1    = file(renameList[0])
+                      r1       = renameList[1]
+                      newid    = renameList[4]
+                      dir1     = myfq1.getParent()
                       newName1 = "${dir1}/${newid}_${r1}.fastq.gz"
                       myfq1.copyTo(newName1)
 
-                      myfq2 = file(renameList[2])
-                      r2    = renameList[3]
-                      dir2  = myfq2.getParent()
+                      myfq2    = file(renameList[2])
+                      r2       = renameList[3]
+                      dir2     = myfq2.getParent()
                       newName2 = "${dir2}/${newid}_${r2}.fastq.gz"
                       myfq2.copyTo(newName2)
                       [ newid, tuple(r1, r2), tuple(newName1, newName2) ]
@@ -178,9 +178,9 @@ if ( !gvcfStart) {
                 idReadFq = Channel
                     .fromPath( "${params.dataDir}" )
                     .map { file ->
-                        fName = file.baseName
-                        fName2 = fName.replaceAll("LU01-", "LU01_")
-                        id = fName2.tokenize('.')[0].tokenize('_')[1]
+                        fName    = file.baseName
+                        fName2   = fName.replaceAll("LU01-", "LU01_")
+                        id       = fName2.tokenize('.')[0].tokenize('_')[1]
                         read_num = fName2.tokenize('.')[0].tokenize('_')[3]
                         [ id, read_num, file ]
                     }
@@ -334,8 +334,10 @@ if ( !gvcfStart) {
                     id = fName.tokenize('.')[0].tokenize('_')[0]
                     [ id, file ]
                 }
+
+            idReadFq.into { fastp_in }
             
-            process runFastp {
+            process runFastpOneFq {
                 tag { sample_id }
 
                 publishDir "${params.fastp}", mode: 'copy', pattern: '*.html'
@@ -363,7 +365,7 @@ if ( !gvcfStart) {
 
             fastp_out.into { fastqc_in; gunzip_fq_in }
 
-            process runFastqc {
+            process runFastqcOneFq {
                 tag { sample_id }
 
                 input:
@@ -378,7 +380,7 @@ if ( !gvcfStart) {
                 '''
             }
 
-            process unzipFastqs {
+            process unzipFastqsOneFq {
                 tag { sample_id }
 
                 input:
@@ -394,7 +396,7 @@ if ( !gvcfStart) {
                 """
             }
 
-            process BWA {
+            process BWAOneFq {
                 tag { sample_id }
                 echo true 
                 beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
@@ -601,8 +603,8 @@ if ( !gvcfStart) {
             output:
             file("${sample_id}.sample_summary")
             
+            shell:
             if (interval) {
-                shell:
                 '''
                 module load sentieon/201711.05
                 sentieon driver \\
@@ -618,7 +620,6 @@ if ( !gvcfStart) {
                 "!{sample_id}"
                 '''
             } else {
-                shell:
                 '''
                 module load sentieon/201711.05
                 sentieon driver \\
@@ -666,14 +667,14 @@ if ( !gvcfStart) {
 
     } else {
 
-        famSampleExtra = Channel
+        sampleid_bam = Channel
           .fromPath( "${params.dataDir}" )
           .map { bam ->
-              famidSampleidExtra = bam.baseName
-              sample_id = famidSampleidExtra.tokenize('.')[1]
+              sampleidExt = bam.baseName
+              sample_id = sampleidExt.tokenize('.')[0]
               [ sample_id, bam ]
           }
-        famSampleExtra.into { stats_in; flagstat_in; coverageMetrics_in; haplotyper_in }
+        sampleid_bam.into { stats_in; flagstat_in; coverageMetrics_in; haplotyper_in }
 
         process samStatsFromBam {
             tag { sample_id }
@@ -731,8 +732,9 @@ if ( !gvcfStart) {
             output:
             file("${sample_id}.sample_summary")
             
+            shell:
+
             if (interval) {
-                shell:
                 '''
                 module load sentieon/201711.05
                 sentieon driver \\
@@ -748,7 +750,6 @@ if ( !gvcfStart) {
                 "!{sample_id}"
                 '''
             } else {
-                shell:
                 '''
                 module load sentieon/201711.05
                 sentieon driver \\
@@ -849,8 +850,8 @@ process gvcfTyper {
     output:
     set file ("${params.project}_noVQSR.vcf.gz"), file("${params.project}_noVQSR.vcf.gz.tbi") into gvcfTyper_out
 
+    shell:
     if (interval) {
-        shell:
 
         inputGVCFs = gvcfs.join(' -v ')
 
@@ -861,12 +862,11 @@ process gvcfTyper {
         -r !{params.reference} \\
         --interval !{params.tiledBedFile} \\
         --algo GVCFtyper \\
-        "!{params.project}.g.vcf.gz" \\
+        "!{params.project}_noVQSR.vcf.gz" \\
         -v !{inputGVCFs}
         '''
 
     } else {
-        shell:
 
         inputGVCFs = gvcfs.join(' -v ')
 
@@ -876,7 +876,7 @@ process gvcfTyper {
         -t !{params.cpus_left} \\
         -r !{params.reference} \\
         --algo GVCFtyper \\
-        "!{params.project}.g.vcf.gz" \\
+        "!{params.project}_noVQSR.vcf.gz" \\
         -v !{inputGVCFs}
         '''
     }
@@ -1003,7 +1003,7 @@ if (!isTargSeq) {
         set file(snp_recal_file), file(recal_index), file(IndelTranch), file(recalVCF), file(index) from varCalIndel_out
 
         output:
-        set file("${params.project}.vcf.gz"), file("${params.project}.vcf.gz.tbi") into appliedIndel_out
+        set file("${params.project}_VQSR.vcf.gz"), file("${params.project}_VQSR.vcf.gz.tbi") into appliedIndel_out
 
         """
         module load sentieon/201711.05
@@ -1070,6 +1070,7 @@ process multiqc {
         """
         multiqc ${params.complete} --force --data-dir --filename "${params.project}.multiqc.report"
         """
+    }
 }
 
 workflow.onComplete {
