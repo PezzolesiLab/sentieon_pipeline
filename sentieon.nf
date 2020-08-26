@@ -1058,13 +1058,11 @@ process multiqc {
     script:
     if (bamStart) {
         """
-        rm -r ${params.fastqc} ${params.fastp} ${params.bqsr} ${params.bam}
-        multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report"
+        multiqc ${params.complete} --force --no-data-dir --filename "${params.project}.multiqc.report" && rm -r ${params.fastqc} ${params.fastp} ${params.bqsr} ${params.bam}
         """
     } else if (gvcfStart) {
         """
-        rm -r ${params.fastqc} ${params.fastp} ${params.bqsr} ${params.bam} ${params.gvcf}
-        multiqc ${params.complete} --force --data-dir --filename "${params.project}.multiqc.report"
+        multiqc ${params.complete} --force --data-dir --filename "${params.project}.multiqc.report" && rm -r ${params.fastqc} ${params.fastp} ${params.bqsr} ${params.bam} ${params.gvcf}
         """
     } else {
         """
