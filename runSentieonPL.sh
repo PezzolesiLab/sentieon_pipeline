@@ -6,8 +6,8 @@
 #SBATCH -e pipelineKickOff-%j.err
 #SBATCH --mail-user=scott.frodsham@hsc.utah.edu
 #SBATCH --mail-type=END
-#SBATCH --account=pezzolesi-np
-#SBATCH --partition=pezzolesi-shared-np
+#SBATCH --account=pezzolesi
+#SBATCH --partition=notchpeak-shared
 #SBATCH --ntasks=6
 #SBATCH --mem=32G
 
@@ -15,7 +15,7 @@
 resume=$1
 configFile=$2
 # rename this vvvv to create a new directory for your project (i.e. if you want to start over without deleting what you've already done)
-scratchDir="$scr/gencoveBamStart"
+scratchDir="$scr/sentieonUDDCSWES_MissingBAMs"
 #var=$(cat nextflow.config | grep "scratch =")--|
 #IFS="\"" read -ra varArr <<< $var              |- cant get to work yet
 #scratchDir=${varArr[1]}                      --|
