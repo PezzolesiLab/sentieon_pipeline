@@ -1,3 +1,8 @@
+# Capabilities
+
+The pipeline can handle FASTQ, BAM, and GVCF files as inputs. It can handle single-end and paired-end reads. It can handle
+targeted, whole exome, and whole genome data. It can demultiplex fastqs.
+
 # How to Run the Pipeline
 
 ## FASTQs
@@ -19,10 +24,8 @@ section, you should only change the `clusterOptions` and the `scratch` variables
 job that is scheduled to a CHPC cluster. The `scratch` directory specifies the directory where the heavy lifting will be done and where the end results of the pipeline. Be sure that the `scratch` variable matches the `scratchDir` variable in the `runSentieonPL.sh` script.
 
 The pipeline is designed to run on the Pezzolesi node (notch026). Our node has 32 CPUs on it. By using the "shared" feature, we can schedule jobs on each of these CPUs individually or on groups of them. Once it's running, nextflow should run on a small set of CPUs, the subsequent jobs will be scheduled using the remaining CPUs. The command that controls this behavior is `clusterOptions`.
-
-## runSentieonPL.sh File
-
-You need to make sure that the `scratchDir` variable in this file matches the `scratch` variable you specify in your `nextflow.config` file.
+[//]: #(## runSentieonPL.sh File)
+[//]: #(You need to make sure that the `scratchDir` variable in this file matches the `scratch` variable you specify in your `nextflow.config` file.)
 
 ## Starting the Pipeline
 
@@ -33,11 +36,3 @@ The pipeline is started through the `runSentieonPL.sh` script by issuing one of 
  or 
 
 `sbatch runSentieonPL.sh resume`
-
-## A Couple of Final Notes
-
-The pipeline is set to run for 5 days. If you think it'll take longer than that then modify the `--time` flag in the
-`runSentieonPL.sh` SLURM header.
-
-The pipeline stalls out after finishing (still can't get it to recognize when it's done), so you'll have to cancel the job
-yourself in order to free up the Pezzolesi node for others to use.

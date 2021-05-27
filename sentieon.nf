@@ -5,6 +5,8 @@ log.info """\
               Pezzolesi Lab           
             Sentieon Pipeline            
     ==================================
+
+    -- Project Name: $params.project --
     
     -- With the following VQSR knowns --
        reference: $params.reference 
@@ -102,7 +104,6 @@ if ( !gvcfStart ) {
                 }
 
                 //.filter { ( it[1] =~ /bc[0-3][0-9]|bc4[0-8]/ & it[1] =~ /15686/ ) | ( it[1] =~ /bc49|bc[5-8][0-9]|bc9[0-6]/ & it[1] =~ /15887/ ) }
-                //.filter { it[0] =~ /bc[0][1-2]/ }
                 demux_out
                   .transpose()
                   .filter { ( it.toString() =~ /15686\w*\.(bc[0-3][0-9]|bc4[0-8])|15887\w*\.(bc49|bc[5-9][0-9]|bc9[0-6])|15942X1\w*\.(bc[0-3][0-9]|bc4[0-8])|15942X2\w*\.(bc49|bc[5-9][0-9]|bc9[0-6])/ ) }
@@ -143,13 +144,10 @@ if ( !gvcfStart ) {
                   '''
                 }
 
-                  //.filter { it[1] =~ /bc[0][1-2]/ }
                 sampleNamesBarcodeKey = Channel
                   .fromPath( "${params.sampleKey}" )
                   .splitCsv(header: true)
                   .map { row -> tuple(row.Library + "_" + row.Read + "_L" + row.Lane + "_" + row.Barcode_ID, row.Sample_ID) }
-                  //.filter { ( it.toString() =~ /15686\w*_(bc[0-3][0-9]|bc4[0-8])|15887\w*_(bc49|bc[5-9][0-9]|bc9[0-6])/ ) }
-                  //.filter { (it[1] =~ /bc[0-3][0-9]|bc4[0-8]/ & it[1] =~ /15686/) | (it[1] =~ /bc49|bc[5-8][0-9]|bc9[0-6]/ & it[1] =~ /15887/ ) }
 
                 trim_out.join(sampleNamesBarcodeKey).flatten().buffer(size:5, skip:1).set{ rename_in }
 
@@ -179,8 +177,8 @@ if ( !gvcfStart ) {
                     .map { file ->
                         fName    = file.baseName
                         fName2   = fName.replaceAll("LU01-", "LU01_")
-                        id       = fName2.tokenize('.')[0].tokenize('_')[1]
-                        read_num = fName2.tokenize('.')[0].tokenize('_')[3]
+                        id       = fName2.tokenize('.')[0].tokenize('_')[0]
+                        read_num = fName2.tokenize('.')[0].tokenize('_')[2]
                         [ id, read_num, file ]
                     }
                 
@@ -836,7 +834,6 @@ if (jointCalling) {
             .set { gvcfTyper_in }
     }
 }
-
 process gvcfTyper {
     tag { "$params.project" }
     beforeScript 'export MODULEPATH=$MODULEPATH:/scratch/ucgd/serial/common/modulefiles/notchpeak.peaks'
