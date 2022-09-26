@@ -36,3 +36,7 @@ The pipeline is started through the `runSentieonPL.sh` script by issuing one of 
  or 
 
 `sbatch runSentieonPL.sh resume`
+
+# Version
+
+Release 201808.08
